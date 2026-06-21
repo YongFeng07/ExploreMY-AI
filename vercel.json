@@ -1,5 +1,5 @@
 {
-  "buildCommand": "cd ../.. && npx pnpm install && cd apps/web && npx next build",
+  "buildCommand": "pnpm turbo build --filter=@exploremy/web",
   "outputDirectory": "apps/web/.next",
-  "installCommand": "npm install -g pnpm && pnpm install"
+  "installCommand": "npm install -g pnpm@9 && pnpm install --no-frozen-lockfile"
 }
