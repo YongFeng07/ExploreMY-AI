@@ -1,0 +1,1 @@
+web: cd apps/api && npx nest build && node dist/main

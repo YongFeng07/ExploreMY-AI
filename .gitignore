@@ -5,7 +5,7 @@ dist/
 *.log
 .env
 .env.local
-.env.production
+# .env.production — kept for Railway
 uploads/*
 !uploads/.gitkeep
 exploremy-data.json

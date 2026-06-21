@@ -1,0 +1,7 @@
+{
+  "buildCommand": "cd ../.. && npx turbo build --filter=@exploremy/web",
+  "outputDirectory": ".next",
+  "installCommand": "cd ../.. && npm install",
+  "framework": "nextjs",
+  "rootDirectory": "apps/web"
+}
