@@ -1,6 +1,0 @@
-{
-  "framework": "nextjs",
-  "buildCommand": "cd apps/web && npm install --legacy-peer-deps && npx next build",
-  "installCommand": "",
-  "ignoreCommand": "node -e \"process.exit(0)\""
-}
