@@ -19,6 +19,9 @@
   },
   "dependencies": {
     "@clerk/clerk-sdk-node": "^5.0.0",
+    "@exploremy/config": "workspace:*",
+    "@exploremy/database": "workspace:*",
+    "@exploremy/shared": "workspace:*",
     "@googlemaps/google-maps-services-js": "^3.4.0",
     "@nestjs/axios": "^3.1.2",
     "@nestjs/bullmq": "^10.2.3",
@@ -61,6 +64,8 @@
     "zod": "^3.24.1"
   },
   "devDependencies": {
+    "@exploremy/eslint-config": "workspace:*",
+    "@exploremy/tsconfig": "workspace:*",
     "@nestjs/cli": "^10.4.0",
     "@nestjs/schematics": "^10.2.0",
     "@nestjs/testing": "^10.4.0",

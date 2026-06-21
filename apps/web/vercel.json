@@ -1,5 +1,5 @@
 {
   "framework": "nextjs",
-  "installCommand": "",
-  "buildCommand": "npm install --legacy-peer-deps && npx next build"
+  "installCommand": "npm install -g pnpm@9 && pnpm install --no-frozen-lockfile --filter @exploremy/web",
+  "buildCommand": "pnpm turbo build --filter=@exploremy/web"
 }
