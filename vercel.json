@@ -1,5 +1,6 @@
 {
   "framework": "nextjs",
-  "buildCommand": "pnpm install --no-frozen-lockfile && cd apps/web && npx next build",
-  "installCommand": "npm install -g pnpm@9 && pnpm install --no-frozen-lockfile"
+  "buildCommand": "cd apps/web && npm install --legacy-peer-deps && npx next build",
+  "installCommand": "",
+  "ignoreCommand": "node -e \"process.exit(0)\""
 }
