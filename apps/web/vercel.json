@@ -1,5 +1,6 @@
 {
-  "buildCommand": "npm install --legacy-peer-deps && cd apps/web && npx next build",
-  "outputDirectory": "apps/web/.next",
-  "installCommand": "npm install --legacy-peer-deps"
+  "framework": "nextjs",
+  "buildCommand": "pnpm install --no-frozen-lockfile && pnpm turbo build --filter=@exploremy/web",
+  "outputDirectory": ".next",
+  "installCommand": "npm install -g pnpm@9 && pnpm install --no-frozen-lockfile"
 }
