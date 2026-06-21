@@ -1,0 +1,1943 @@
+// =============================================================================
+// ExploreMY AI — Complete Prisma Database Schema
+// =============================================================================
+// PostgreSQL 16 + PostGIS + pgvector
+// Database:  PostgreSQL 16 on Railway
+// Cache:     Redis (Upstash)
+// Search:    Algolia
+//
+// Commands:
+//   pnpm db:generate       Generate Prisma client
+//   pnpm db:migrate        Create and apply migration (dev)
+//   pnpm db:migrate:deploy Apply migrations (production)
+//   pnpm db:seed           Seed development data
+//   pnpm db:studio         Open Prisma Studio
+//   pnpm db:reset          Reset database (WARNING: destroys data)
+// =============================================================================
+
+generator client {
+  provider        = "prisma-client-js"
+  previewFeatures = ["postgresqlExtensions", "fullTextSearch", "fullTextIndex"]
+  output          = "../src/generated"
+}
+
+datasource db {
+  provider   = "postgresql"
+  url        = env("DATABASE_URL")
+  directUrl  = env("DIRECT_URL")
+}
+
+// =============================================================================
+// ENUMS
+// =============================================================================
+
+enum PlaceCategory {
+  RESTAURANT
+  CAFE
+  STREET_FOOD
+  FOOD_COURT
+  NIGHT_MARKET
+  ATTRACTION
+  SHOPPING_MALL
+  HOTEL
+  HOSTEL
+  RESORT
+  PHARMACY
+  HOSPITAL
+  CLINIC
+  PETROL_STATION
+  EV_CHARGER
+  PUBLIC_TOILET
+  PARK
+  BEACH
+  HIKING_TRAIL
+  MUSEUM
+  TEMPLE
+  MOSQUE
+  CHURCH
+  VIEWPOINT
+  MARKET
+  ENTERTAINMENT
+  CONVENIENCE_STORE
+  LIBRARY
+  COWORKING_SPACE
+  OTHER
+}
+
+enum TransportMode {
+  WALKING
+  DRIVING
+  MOTORCYCLE
+  GRAB
+  BUS
+  MRT
+  LRT
+  KTM
+  ETS
+  FLIGHT
+  FERRY
+  BICYCLE
+}
+
+enum TripStatus {
+  DRAFT
+  PLANNED
+  ACTIVE
+  COMPLETED
+  CANCELLED
+}
+
+enum NotificationType {
+  REVIEW_REQUEST
+  ACHIEVEMENT_UNLOCKED
+  NEW_FOLLOWER
+  TRIP_REMINDER
+  PLACE_VERIFIED
+  PROMOTION_AVAILABLE
+  BUSINESS_REPLY
+  SYSTEM
+  SOCIAL_LIKE
+  SOCIAL_COMMENT
+  TRIP_INVITE
+  FAVORITE_PRICE_DROP
+  NEARBY_HIDDEN_GEM
+  WEEKLY_DIGEST
+}
+
+enum SubscriptionPlan {
+  FREE
+  PRO
+  ENTERPRISE
+}
+
+enum SubscriptionStatus {
+  ACTIVE
+  PAST_DUE
+  CANCELED
+  INCOMPLETE
+  INCOMPLETE_EXPIRED
+  TRIALING
+  UNPAID
+  PAUSED
+}
+
+enum TravelStyle {
+  BUDGET
+  MID_RANGE
+  LUXURY
+  ADVENTURE
+  FOODIE
+  CULTURAL
+  FAMILY
+  SOLO
+  BACKPACKER
+}
+
+enum AIRecommendationType {
+  FOOD
+  ATTRACTION
+  ROUTE
+  WEEKEND_PLAN
+  FULL_TRIP
+  HIDDEN_GEM
+  TRENDING
+}
+
+enum RouteType {
+  FASTEST
+  CHEAPEST
+  SCENIC
+  TOURIST
+  FOOD
+}
+
+enum UserRole {
+  USER
+  VERIFIED_USER
+  BUSINESS_OWNER
+  PREMIUM_USER
+  MODERATOR
+  ADMIN
+  SUPER_ADMIN
+}
+
+enum PhotoModerationStatus {
+  PENDING
+  APPROVED
+  REJECTED
+  FLAGGED
+}
+
+enum ReviewModerationStatus {
+  PENDING
+  APPROVED
+  REJECTED
+  FLAGGED
+}
+
+enum BusinessVerificationStatus {
+  UNVERIFIED
+  PENDING
+  VERIFIED
+  REJECTED
+}
+
+enum ContentReportReason {
+  SPAM
+  INAPPROPRIATE
+  FAKE
+  OFFENSIVE
+  COPYRIGHT
+  OTHER
+}
+
+enum ContentReportStatus {
+  PENDING
+  REVIEWED
+  RESOLVED
+  DISMISSED
+}
+
+enum WeekendPlanType {
+  ONE_DAY
+  TWO_DAY
+  THREE_DAY
+  FULL_WEEKEND
+}
+
+enum GroupType {
+  SOLO
+  COUPLE
+  FAMILY
+  FRIENDS
+}
+
+enum WeekendTravelStyle {
+  ADVENTURE
+  LUXURY
+  BUDGET
+  NATURE
+  FOODIE
+  PHOTOGRAPHY
+  NIGHTLIFE
+}
+
+enum SpecialPreference {
+  PET_FRIENDLY
+  KID_FRIENDLY
+  WHEELCHAIR_FRIENDLY
+  HALAL_FOOD
+  VEGETARIAN
+}
+
+enum StopCategory {
+  BREAKFAST
+  BRUNCH
+  LUNCH
+  CAFE_STOP
+  DINNER
+  SUPPER
+  TOURIST_ATTRACTION
+  HIDDEN_GEM
+  PHOTO_SPOT
+  NIGHT_ACTIVITY
+  SHOPPING
+  NATURE
+  TRANSIT
+}
+
+enum OptimizationStrategy {
+  FASTEST
+  CHEAPEST
+  SCENIC
+  BALANCED
+}
+
+enum CostCategory {
+  FUEL
+  TOLL
+  PARKING
+  HOTEL
+  FOOD
+  TICKET
+  TRANSPORT
+  EMERGENCY_BUFFER
+  MISC
+}
+
+// =============================================================================
+// CORE USER MODELS
+// =============================================================================
+
+model User {
+  id                  String      @id @default(uuid()) @db.Uuid
+  clerkId             String      @unique @db.VarChar(255)
+  email               String      @unique @db.VarChar(320)
+  displayName         String      @db.VarChar(100)
+  avatarUrl           String?     @db.VarChar(2048)
+  bio                 String?     @db.VarChar(500)
+  homeCity            String?     @db.VarChar(100)
+  homeState           String?     @db.VarChar(100)
+  preferredLanguage   String      @default("en") @db.VarChar(10)
+  travelStyle         TravelStyle?
+  dietaryPreferences  Json?
+  accessibilityNeeds  Json?
+  role                UserRole    @default(USER)
+  isDeleted           Boolean     @default(false)
+  deletedAt           DateTime?
+  lastLoginAt         DateTime?
+  createdAt           DateTime    @default(now()) @db.Timestamptz()
+  updatedAt           DateTime    @updatedAt @db.Timestamptz()
+
+  // Relations
+  profile              Profile?
+  reviews              Review[]
+  photos               Photo[]
+  favorites            Favorite[]
+  favoriteLists        FavoriteList[]
+  trips                Trip[]
+  weekendPlans          WeekendPlan[]
+  aiRecommendations    AIRecommendation[]
+  searchHistory        SearchHistory[]
+  preferences          UserPreferences?
+  locationHistory      LocationHistory[]
+  achievements         UserAchievement[]
+  notifications        Notification[]
+  businessAccounts     BusinessAccount[]
+  subscriptions        Subscription[]
+  socialPosts          SocialPost[]
+  socialComments       SocialComment[]
+  socialLikes          SocialLike[]
+  followers            UserFollow[]       @relation("Following")
+  following            UserFollow[]       @relation("Follower")
+  contentReports       ContentReport[]     @relation("ReportedBy")
+  couponRedemptions    CouponRedemption[]
+  datePlans            DatePlan[]
+  dateHistories        DateHistory[]
+  travelGoals          TravelGoal[]
+  contributions        Contribution[]
+  coupleWalletsP1      CoupleWallet[]     @relation("CouplePartner1")
+  coupleWalletsP2      CoupleWallet[]     @relation("CouplePartner2")
+  groupWallets         GroupWallet[]
+  helpfulMarks         HelpfulMark[]
+  placeViews           PlaceView[]
+  devices              UserDevice[]
+  sessions             UserSession[]
+
+  @@index([clerkId])
+  @@index([email])
+  @@index([role])
+  @@index([isDeleted])
+  @@index([createdAt])
+  @@index([lastLoginAt])
+  @@map("users")
+}
+
+model Profile {
+  id                String    @id @default(uuid()) @db.Uuid
+  userId            String    @unique @db.Uuid
+  followersCount    Int       @default(0)
+  followingCount    Int       @default(0)
+  reviewsCount      Int       @default(0)
+  photosCount       Int       @default(0)
+  achievementsCount Int       @default(0)
+  tripsCount        Int       @default(0)
+  favoritesCount    Int       @default(0)
+  hiddenGemsFound   Int       @default(0)
+  level             Int       @default(1)
+  xp                Int       @default(0)
+  isVerified        Boolean   @default(false)
+  isBusinessOwner   Boolean   @default(false)
+  socialLinks       Json?
+  travelStats       Json?
+  createdAt         DateTime  @default(now()) @db.Timestamptz()
+  updatedAt         DateTime  @updatedAt @db.Timestamptz()
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([level])
+  @@index([xp])
+  @@map("profiles")
+}
+
+model UserDevice {
+  id              String    @id @default(uuid()) @db.Uuid
+  userId          String    @db.Uuid
+  deviceToken     String    @db.VarChar(512)
+  platform        String    @db.VarChar(20)     // "ios" | "android" | "web"
+  isActive        Boolean   @default(true)
+  lastUsedAt      DateTime  @default(now()) @db.Timestamptz()
+  createdAt       DateTime  @default(now()) @db.Timestamptz()
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, deviceToken])
+  @@index([userId, isActive])
+  @@map("user_devices")
+}
+
+model UserSession {
+  id              String    @id @default(uuid()) @db.Uuid
+  userId          String    @db.Uuid
+  token           String    @unique @db.VarChar(512)
+  ipAddress       String?   @db.VarChar(45)
+  userAgent       String?   @db.VarChar(512)
+  expiresAt       DateTime  @db.Timestamptz()
+  createdAt       DateTime  @default(now()) @db.Timestamptz()
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([token])
+  @@index([expiresAt])
+  @@map("user_sessions")
+}
+
+// =============================================================================
+// PLACE MODELS
+// =============================================================================
+
+model Place {
+  id                   String        @id @default(uuid()) @db.Uuid
+  googlePlaceId        String?       @unique @db.VarChar(255)
+  slug                 String        @unique @db.VarChar(255)
+  name                 String        @db.VarChar(255)
+  description          String?       @db.Text
+  category             PlaceCategory
+  subcategory          String?       @db.VarChar(100)
+  address              String?       @db.VarChar(500)
+  city                 String?       @db.VarChar(100)
+  state                String?       @db.VarChar(100)
+  postcode             String?       @db.VarChar(10)
+  country              String        @default("Malaysia") @db.VarChar(100)
+  lat                  Float
+  lng                  Float
+  location             Unsupported("geometry(Point, 4326)")?
+  phone                String?       @db.VarChar(20)
+  website              String?       @db.VarChar(2048)
+  email                String?       @db.VarChar(320)
+  priceLevel           Int?          // 0=Free, 1=Inexpensive, 2=Moderate, 3=Expensive, 4=Very Expensive
+  rating               Float         @default(0)
+  reviewCount          Int           @default(0)
+  photos               Json?         // Array of photo URLs (primary photos)
+  openingHours         Json?         // Structured opening hours per day
+  amenities            Json?         // WiFi, Parking, Halal, Wheelchair, etc.
+  isHiddenGem          Boolean       @default(false)
+  hiddenGemScore       Float         @default(0)
+  isTrending           Boolean       @default(false)
+  trendingScore        Float         @default(0)
+  popularityScore      Float         @default(0)
+  isClaimed            Boolean       @default(false)
+  claimedByBusinessId  String?       @db.Uuid
+  isPermanentlyClosed  Boolean       @default(false)
+  metadata             Json?
+  searchVector         Unsupported("tsvector")?
+  embedding            Unsupported("vector(1536)")?  // OpenAI text-embedding-3-small
+  createdAt            DateTime      @default(now()) @db.Timestamptz()
+  updatedAt            DateTime      @updatedAt @db.Timestamptz()
+
+  // Relations
+  reviews               Review[]
+  photosRelation        Photo[]
+  favorites             Favorite[]
+  tripStops             TripStop[]
+  weekendPlanStops      WeekendPlanStop[]
+  weekendRecommendations WeekendRecommendation[]
+  routesOrigin          Route[]                 @relation("OriginPlace")
+  routesDest            Route[]                 @relation("DestinationPlace")
+  events                Event[]
+  aiRecommendations     AIRecommendation[]
+  searchHistory         SearchHistory[]
+  locationHistory       LocationHistory[]
+  claimedByBusiness     BusinessAccount?        @relation("ClaimedPlaces", fields: [claimedByBusinessId], references: [id], onDelete: SetNull)
+  socialPosts           SocialPost[]
+  views                 PlaceView[]
+  dateActivities        DateActivity[]
+
+  @@index([lat, lng])
+  @@index([category])
+  @@index([city, state])
+  @@index([rating])
+  @@index([rating, reviewCount])
+  @@index([isHiddenGem, hiddenGemScore])
+  @@index([isTrending, trendingScore])
+  @@index([popularityScore])
+  @@index([googlePlaceId])
+  @@index([slug])
+  @@index([isClaimed])
+  @@index([isPermanentlyClosed])
+  @@index([priceLevel])
+  @@index([category, city])
+  @@index([category, rating])
+  @@map("places")
+}
+
+// =============================================================================
+// REVIEW & PHOTO MODELS
+// =============================================================================
+
+model Review {
+  id               String                 @id @default(uuid()) @db.Uuid
+  userId           String                 @db.Uuid
+  placeId          String                 @db.Uuid
+  rating           Int                    // 1-5 stars
+  title            String?                @db.VarChar(255)
+  content          String?                @db.Text
+  photos           Json?                  // Array of photo URLs attached to review
+  visitDate        DateTime?              @db.Timestamptz()
+  spendPerPerson   Float?
+  tags             Json?                  // ["halal", "cheap", "romantic", etc.]
+  isVerifiedVisit  Boolean                @default(false)
+  helpfulCount     Int                    @default(0)
+  moderationStatus ReviewModerationStatus @default(PENDING)
+  moderatedBy      String?                @db.Uuid
+  moderatedAt      DateTime?              @db.Timestamptz()
+  createdAt        DateTime               @default(now()) @db.Timestamptz()
+  updatedAt        DateTime               @updatedAt @db.Timestamptz()
+
+  user         User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+  place        Place         @relation(fields: [placeId], references: [id], onDelete: Cascade)
+  helpfulMarks HelpfulMark[]
+  photosRelation Photo[]
+
+  @@unique([userId, placeId], name: "uq_review_user_place")
+  @@index([placeId, rating])
+  @@index([placeId, moderationStatus])
+  @@index([placeId, createdAt])
+  @@index([userId])
+  @@index([rating])
+  @@index([moderationStatus])
+  @@index([createdAt])
+  @@index([placeId, rating, createdAt])
+  @@map("reviews")
+}
+
+model HelpfulMark {
+  id        String   @id @default(uuid()) @db.Uuid
+  reviewId  String   @db.Uuid
+  userId    String   @db.Uuid
+  createdAt DateTime @default(now()) @db.Timestamptz()
+
+  review Review @relation(fields: [reviewId], references: [id], onDelete: Cascade)
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([reviewId, userId], name: "uq_helpful_review_user")
+  @@index([reviewId])
+  @@map("helpful_marks")
+}
+
+model Photo {
+  id                String                 @id @default(uuid()) @db.Uuid
+  userId            String                 @db.Uuid
+  placeId           String?                @db.Uuid
+  reviewId          String?                @db.Uuid
+  url               String                 @db.VarChar(2048)
+  thumbnailUrl      String?                @db.VarChar(2048)
+  caption           String?                @db.VarChar(500)
+  locationLat       Float?
+  locationLng       Float?
+  metadata          Json?                  // EXIF data: camera, aperture, etc.
+  isAIProcessed     Boolean                @default(false)
+  aiTags            Json?                  // AI-generated tags: ["food:nasi-lemak", "ambience:cozy"]
+  moderationStatus  PhotoModerationStatus  @default(PENDING)
+  createdAt         DateTime               @default(now()) @db.Timestamptz()
+
+  user   User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+  place  Place?  @relation(fields: [placeId], references: [id], onDelete: SetNull)
+  review Review? @relation(fields: [reviewId], references: [id], onDelete: SetNull)
+
+  @@index([userId])
+  @@index([placeId])
+  @@index([reviewId])
+  @@index([moderationStatus])
+  @@index([createdAt])
+  @@map("photos")
+}
+
+// =============================================================================
+// FAVORITE MODELS
+// =============================================================================
+
+model Favorite {
+  id        String    @id @default(uuid()) @db.Uuid
+  userId    String    @db.Uuid
+  placeId   String    @db.Uuid
+  listId    String?   @db.Uuid
+  notes     String?   @db.VarChar(500)
+  createdAt DateTime  @default(now()) @db.Timestamptz()
+
+  user  User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+  place Place         @relation(fields: [placeId], references: [id], onDelete: Cascade)
+  list  FavoriteList? @relation(fields: [listId], references: [id], onDelete: SetNull)
+
+  @@unique([userId, placeId], name: "uq_favorite_user_place")
+  @@index([userId])
+  @@index([placeId])
+  @@index([listId])
+  @@index([createdAt])
+  @@map("favorites")
+}
+
+model FavoriteList {
+  id          String     @id @default(uuid()) @db.Uuid
+  userId      String     @db.Uuid
+  name        String     @db.VarChar(200)
+  description String?    @db.VarChar(500)
+  isPublic    Boolean    @default(false)
+  coverPhoto  String?    @db.VarChar(2048)
+  placeCount  Int        @default(0)
+  createdAt   DateTime   @default(now()) @db.Timestamptz()
+  updatedAt   DateTime   @updatedAt @db.Timestamptz()
+
+  user      User       @relation(fields: [userId], references: [id], onDelete: Cascade)
+  favorites Favorite[]
+
+  @@index([userId])
+  @@index([isPublic])
+  @@index([createdAt])
+  @@map("favorite_lists")
+}
+
+// =============================================================================
+// TRIP PLANNING MODELS
+// =============================================================================
+
+model Trip {
+  id               String     @id @default(uuid()) @db.Uuid
+  userId           String     @db.Uuid
+  title            String     @db.VarChar(255)
+  description      String?    @db.Text
+  coverPhoto       String?    @db.VarChar(2048)
+  destinationCity  String?    @db.VarChar(100)
+  destinationState String?    @db.VarChar(100)
+  startDate        DateTime?  @db.Timestamptz()
+  endDate          DateTime?  @db.Timestamptz()
+  budget           Float?
+  budgetCurrency   String     @default("MYR") @db.VarChar(3)
+  travelStyle      TravelStyle?
+  isAIGenerated    Boolean    @default(false)
+  aiPrompt         String?    @db.Text
+  aiModel          String?    @db.VarChar(50)
+  status           TripStatus @default(DRAFT)
+  collaborators    Json?      // [{ userId, role: "editor"|"viewer", joinedAt }]
+  totalCost        Float?     // Computed sum of all stops + transport
+  totalDistance    Float?     // Computed sum in meters
+  carbonFootprint  Float?     // Computed sum in grams
+  dayCount         Int        @default(0)
+  isPublic         Boolean    @default(false)
+  shareToken       String?    @unique @db.VarChar(64)
+  viewCount        Int        @default(0)
+  likeCount        Int        @default(0)
+  createdAt        DateTime   @default(now()) @db.Timestamptz()
+  updatedAt        DateTime   @updatedAt @db.Timestamptz()
+
+  user    User       @relation(fields: [userId], references: [id], onDelete: Cascade)
+  days    TripDay[]
+  posts   SocialPost[]
+
+  @@index([userId])
+  @@index([userId, status])
+  @@index([status])
+  @@index([shareToken])
+  @@index([isPublic, likeCount])
+  @@index([startDate, endDate])
+  @@index([createdAt])
+  @@map("trips")
+}
+
+model TripDay {
+  id         String    @id @default(uuid()) @db.Uuid
+  tripId     String    @db.Uuid
+  dayNumber  Int
+  date       DateTime? @db.Date
+  notes      String?   @db.Text
+  weather    Json?     // Cached weather data: { temp, condition, icon }
+  createdAt  DateTime  @default(now()) @db.Timestamptz()
+
+  trip  Trip       @relation(fields: [tripId], references: [id], onDelete: Cascade)
+  stops TripStop[]
+
+  @@unique([tripId, dayNumber], name: "uq_trip_day_number")
+  @@index([tripId])
+  @@map("trip_days")
+}
+
+model TripStop {
+  id                       String        @id @default(uuid()) @db.Uuid
+  tripDayId                String        @db.Uuid
+  placeId                  String        @db.Uuid
+  order                    Int
+  startTime                DateTime?     @db.Timetz()
+  endTime                  DateTime?     @db.Timetz()
+  durationMinutes          Int?
+  notes                    String?       @db.Text
+  transportModeFromPrevious TransportMode? // How to get here from previous stop
+  costEstimate             Float?
+  distanceFromPrevious     Float?         // Meters from previous stop
+
+  tripDay TripDay @relation(fields: [tripDayId], references: [id], onDelete: Cascade)
+  place   Place   @relation(fields: [placeId], references: [id], onDelete: Cascade)
+
+  @@index([tripDayId])
+  @@index([tripDayId, order])
+  @@index([placeId])
+  @@map("trip_stops")
+}
+
+// =============================================================================
+// ROUTE & TRANSPORT MODELS
+// =============================================================================
+
+model Route {
+  id                     String        @id @default(uuid()) @db.Uuid
+  originPlaceId          String        @db.Uuid
+  destinationPlaceId     String        @db.Uuid
+  transportMode          TransportMode
+  polyline               String?       @db.Text   // Encoded polyline from Google Directions
+  distanceMeters         Float?
+  durationSeconds        Float?
+  durationInTrafficSeconds Float?
+  costEstimate           Float?
+  currency               String        @default("MYR") @db.VarChar(3)
+  carbonFootprintGrams   Float?
+  waypoints              Json?         // Intermediate stops
+  steps                  Json?         // Turn-by-turn instructions
+  routeType              RouteType     @default(FASTEST)
+  scenicScore            Float         @default(0)
+  foodDensityScore       Float         @default(0)
+  touristDensityScore    Float         @default(0)
+  metadata               Json?
+  expiresAt              DateTime?     @db.Timestamptz()
+  createdAt              DateTime      @default(now()) @db.Timestamptz()
+
+  origin           Place             @relation("OriginPlace", fields: [originPlaceId], references: [id], onDelete: Cascade)
+  destination      Place             @relation("DestinationPlace", fields: [destinationPlaceId], references: [id], onDelete: Cascade)
+  transportOptions TransportOption[]
+
+  @@index([originPlaceId, destinationPlaceId])
+  @@index([originPlaceId, destinationPlaceId, transportMode])
+  @@index([expiresAt])
+  @@index([routeType])
+  @@map("routes")
+}
+
+model TransportOption {
+  id              String        @id @default(uuid()) @db.Uuid
+  routeId         String        @db.Uuid
+  type            TransportMode
+  provider        String?       @db.VarChar(100)  // "Grab", "RapidKL", "KTM", "AirAsia"
+  price           Float?
+  currency        String        @default("MYR") @db.VarChar(3)
+  durationMinutes Int?
+  departureTime   DateTime?     @db.Timestamptz()
+  arrivalTime     DateTime?     @db.Timestamptz()
+  bookingUrl      String?       @db.VarChar(2048)
+  metadata        Json?         // Additional provider-specific data
+  createdAt       DateTime      @default(now()) @db.Timestamptz()
+
+  route Route @relation(fields: [routeId], references: [id], onDelete: Cascade)
+
+  @@index([routeId])
+  @@index([type])
+  @@index([routeId, type])
+  @@map("transport_options")
+}
+
+// =============================================================================
+// GAMIFICATION MODELS
+// =============================================================================
+
+model Achievement {
+  id          String @id @default(uuid()) @db.Uuid
+  code        String @unique @db.VarChar(50)
+  name        String @db.VarChar(100)
+  description String @db.VarChar(500)
+  icon        String @db.VarChar(100)
+  category    String @db.VarChar(50)  // "food", "exploration", "social", "review", "trip"
+  xpReward    Int    @default(0)
+  tier        Int    @default(1)      // 1=Bronze, 2=Silver, 3=Gold, 4=Platinum
+  isHidden    Boolean @default(false) // Secret achievement?
+  criteria    Json   // { type, threshold, description }
+
+  userAchievements UserAchievement[]
+
+  @@index([category])
+  @@map("achievements")
+}
+
+model UserAchievement {
+  id            String    @id @default(uuid()) @db.Uuid
+  userId        String    @db.Uuid
+  achievementId String    @db.Uuid
+  progress      Float     @default(0)     // 0.0 to 1.0
+  isCompleted   Boolean   @default(false)
+  completedAt   DateTime? @db.Timestamptz()
+  notifiedAt    DateTime? @db.Timestamptz()
+  createdAt     DateTime  @default(now()) @db.Timestamptz()
+
+  user        User        @relation(fields: [userId], references: [id], onDelete: Cascade)
+  achievement Achievement @relation(fields: [achievementId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, achievementId], name: "uq_user_achievement")
+  @@index([userId, isCompleted])
+  @@index([achievementId])
+  @@map("user_achievements")
+}
+
+// =============================================================================
+// NOTIFICATION MODEL
+// =============================================================================
+
+model Notification {
+  id         String           @id @default(uuid()) @db.Uuid
+  userId     String           @db.Uuid
+  type       NotificationType
+  title      String           @db.VarChar(255)
+  body       String           @db.Text
+  data       Json?            // { placeId, tripId, userId, deepLink, etc. }
+  imageUrl   String?          @db.VarChar(2048)
+  isRead     Boolean          @default(false)
+  readAt     DateTime?        @db.Timestamptz()
+  isActioned Boolean          @default(false)
+  actionedAt DateTime?        @db.Timestamptz()
+  expiresAt  DateTime?        @db.Timestamptz()
+  createdAt  DateTime         @default(now()) @db.Timestamptz()
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, isRead])
+  @@index([userId, createdAt])
+  @@index([createdAt])
+  @@index([type])
+  @@index([expiresAt])
+  @@map("notifications")
+}
+
+// =============================================================================
+// BUSINESS MODELS
+// =============================================================================
+
+model BusinessAccount {
+  id                    String                     @id @default(uuid()) @db.Uuid
+  userId                String                     @db.Uuid
+  businessName          String                     @db.VarChar(255)
+  businessType          String?                    @db.VarChar(100)
+  registrationNumber    String?                    @unique @db.VarChar(50)
+  phone                 String?                    @db.VarChar(20)
+  email                 String?                    @db.VarChar(320)
+  website               String?                    @db.VarChar(2048)
+  description           String?                    @db.Text
+  logoUrl               String?                    @db.VarChar(2048)
+  verificationStatus    BusinessVerificationStatus @default(UNVERIFIED)
+  verifiedAt            DateTime?                  @db.Timestamptz()
+  subscriptionTier      SubscriptionPlan           @default(FREE)
+  subscriptionExpiresAt DateTime?                  @db.Timestamptz()
+  analytics             Json?
+  createdAt             DateTime                   @default(now()) @db.Timestamptz()
+  updatedAt             DateTime                   @updatedAt @db.Timestamptz()
+
+  user             User              @relation(fields: [userId], references: [id], onDelete: Cascade)
+  claimedPlaces    Place[]           @relation("ClaimedPlaces")
+  promotions       Promotion[]
+  coupons          Coupon[]
+  subscriptions    Subscription[]
+  advertisingSlots AdvertisingSlot[]
+
+  @@index([userId])
+  @@index([verificationStatus])
+  @@index([subscriptionTier])
+  @@map("business_accounts")
+}
+
+model Subscription {
+  id                   String             @id @default(uuid()) @db.Uuid
+  userId               String             @db.Uuid
+  businessId           String?            @db.Uuid
+  plan                 SubscriptionPlan
+  status               SubscriptionStatus
+  stripeSubscriptionId String?            @unique @db.VarChar(255)
+  stripeCustomerId     String?            @db.VarChar(255)
+  currentPeriodStart   DateTime?          @db.Timestamptz()
+  currentPeriodEnd     DateTime?          @db.Timestamptz()
+  canceledAt           DateTime?          @db.Timestamptz()
+  trialEndAt           DateTime?          @db.Timestamptz()
+  metadata             Json?
+  createdAt            DateTime           @default(now()) @db.Timestamptz()
+  updatedAt            DateTime           @updatedAt @db.Timestamptz()
+
+  user     User             @relation(fields: [userId], references: [id], onDelete: Cascade)
+  business BusinessAccount? @relation(fields: [businessId], references: [id], onDelete: SetNull)
+
+  @@index([userId])
+  @@index([businessId])
+  @@index([stripeSubscriptionId])
+  @@index([stripeCustomerId])
+  @@index([status])
+  @@index([currentPeriodEnd])
+  @@map("subscriptions")
+}
+
+model AdvertisingSlot {
+  id            String    @id @default(uuid()) @db.Uuid
+  businessId    String    @db.Uuid
+  name          String    @db.VarChar(200)
+  slotType      String    @db.VarChar(50)  // "search_promoted", "home_banner", "category_featured"
+  placeId       String?   @db.Uuid         // If promoting a specific place
+  imageUrl      String?   @db.VarChar(2048)
+  targetUrl     String?   @db.VarChar(2048)
+  budget        Float?
+  impressions   Int       @default(0)
+  clicks        Int       @default(0)
+  startDate     DateTime  @db.Timestamptz()
+  endDate       DateTime  @db.Timestamptz()
+  isActive      Boolean   @default(true)
+  createdAt     DateTime  @default(now()) @db.Timestamptz()
+  updatedAt     DateTime  @updatedAt @db.Timestamptz()
+
+  business BusinessAccount @relation(fields: [businessId], references: [id], onDelete: Cascade)
+
+  @@index([businessId])
+  @@index([slotType, isActive])
+  @@index([startDate, endDate])
+  @@map("advertising_slots")
+}
+
+model Promotion {
+  id            String    @id @default(uuid()) @db.Uuid
+  businessId    String    @db.Uuid
+  placeId       String?   @db.Uuid
+  title         String    @db.VarChar(255)
+  description   String?   @db.Text
+  discountType  String?   @db.VarChar(50)  // "percentage", "fixed", "bogo", "free_item"
+  discountValue Float?
+  promoCode     String?   @db.VarChar(50)
+  termsAndConditions String? @db.Text
+  startDate     DateTime  @db.Timestamptz()
+  endDate       DateTime  @db.Timestamptz()
+  isActive      Boolean   @default(true)
+  redemptionCount Int     @default(0)
+  metadata      Json?
+  createdAt     DateTime  @default(now()) @db.Timestamptz()
+  updatedAt     DateTime  @updatedAt @db.Timestamptz()
+
+  business BusinessAccount @relation(fields: [businessId], references: [id], onDelete: Cascade)
+  coupons  Coupon[]
+
+  @@index([businessId])
+  @@index([placeId])
+  @@index([isActive])
+  @@index([startDate, endDate])
+  @@index([startDate, endDate, isActive])
+  @@map("promotions")
+}
+
+// =============================================================================
+// COUPON MODELS
+// =============================================================================
+
+model Coupon {
+  id             String              @id @default(uuid()) @db.Uuid
+  promotionId    String?             @db.Uuid
+  businessId     String              @db.Uuid
+  code           String              @unique @db.VarChar(50)
+  discountType   String              @db.VarChar(50)   // "percentage", "fixed", "free_item"
+  discountValue  Float
+  minSpend       Float?
+  maxDiscount    Float?
+  usageLimit     Int?                                   // NULL = unlimited
+  usedCount      Int                 @default(0)
+  userLimit      Int                 @default(1)        // Max per user
+  startDate      DateTime            @db.Timestamptz()
+  endDate        DateTime            @db.Timestamptz()
+  isActive       Boolean             @default(true)
+  terms          String?             @db.Text
+  createdAt      DateTime            @default(now()) @db.Timestamptz()
+  updatedAt      DateTime            @updatedAt @db.Timestamptz()
+
+  promotion   Promotion?           @relation(fields: [promotionId], references: [id], onDelete: SetNull)
+  business    BusinessAccount      @relation(fields: [businessId], references: [id], onDelete: Cascade)
+  redemptions CouponRedemption[]
+
+  @@index([code])
+  @@index([businessId])
+  @@index([promotionId])
+  @@index([isActive, startDate, endDate])
+  @@map("coupons")
+}
+
+model CouponRedemption {
+  id               String    @id @default(uuid()) @db.Uuid
+  couponId         String    @db.Uuid
+  userId           String    @db.Uuid
+  placeId          String?   @db.Uuid
+  discountApplied  Float?
+  createdAt        DateTime  @default(now()) @db.Timestamptz()
+
+  coupon Coupon @relation(fields: [couponId], references: [id], onDelete: Cascade)
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([couponId, userId], name: "uq_coupon_user")
+  @@index([couponId])
+  @@index([userId])
+  @@index([createdAt])
+  @@map("coupon_redemptions")
+}
+
+// =============================================================================
+// EVENT MODEL
+// =============================================================================
+
+model Event {
+  id          String    @id @default(uuid()) @db.Uuid
+  placeId     String?   @db.Uuid
+  name        String    @db.VarChar(255)
+  description String?   @db.Text
+  startDate   DateTime  @db.Timestamptz()
+  endDate     DateTime? @db.Timestamptz()
+  type        String?   @db.VarChar(100)   // "festival", "concert", "food_fair", "exhibition", "sports"
+  priceRange  Json?     // { min, max, currency }
+  photos      Json?
+  website     String?   @db.VarChar(2048)
+  isVerified  Boolean   @default(false)
+  source      String?   @db.VarChar(100)   // "google", "ticketmaster", "user_submitted"
+  createdAt   DateTime  @default(now()) @db.Timestamptz()
+
+  place Place? @relation(fields: [placeId], references: [id], onDelete: SetNull)
+
+  @@index([placeId])
+  @@index([startDate, endDate])
+  @@index([type])
+  // @@index([cityState(placeId)]) // TODO: Virtual index — needs materialized view or denormalization
+  @@map("events")
+}
+
+// =============================================================================
+// AI MODELS
+// =============================================================================
+
+model AIRecommendation {
+  id           String                @id @default(uuid()) @db.Uuid
+  userId       String                @db.Uuid
+  type         AIRecommendationType
+  prompt       String                @db.Text
+  response     Json?                 // Structured AI response
+  model        String?               @db.VarChar(50)     // "gpt-4o", "gemini-2.5-flash"
+  tokensUsed   Int?
+  costIncurred Float?
+  latencyMs    Int?
+  feedback     String?               @default("none")     // "positive", "negative", "none"
+  feedbackNote String?               @db.Text
+  placeId      String?               @db.Uuid             // If recommendation is place-specific
+  tripId       String?               @db.Uuid             // If recommendation generated a trip
+  weekendPlanId String?              @db.Uuid             // If recommendation generated a weekend plan
+  createdAt    DateTime              @default(now()) @db.Timestamptz()
+
+  user  User  @relation(fields: [userId], references: [id], onDelete: Cascade)
+  place Place? @relation(fields: [placeId], references: [id], onDelete: SetNull)
+  weekendPlan WeekendPlan? @relation(fields: [weekendPlanId], references: [id], onDelete: SetNull)
+
+  @@index([userId])
+  @@index([userId, type])
+  @@index([type])
+  @@index([model])
+  @@index([createdAt])
+  @@map("ai_recommendations")
+}
+
+// =============================================================================
+// SEARCH MODELS
+// =============================================================================
+
+model SearchHistory {
+  id             String    @id @default(uuid()) @db.Uuid
+  userId         String    @db.Uuid
+  query          String    @db.VarChar(500)
+  filters        Json?     // Applied filters: { category, priceRange, rating, radius }
+  resultsCount   Int?
+  clickedPlaceId String?   @db.Uuid
+  sessionId      String?   @db.VarChar(100)
+  searchLat      Float?    // Where the user was when searching
+  searchLng      Float?
+  durationMs     Int?      // How long the search took
+  createdAt      DateTime  @default(now()) @db.Timestamptz()
+
+  user    User  @relation(fields: [userId], references: [id], onDelete: Cascade)
+  clicked Place? @relation(fields: [clickedPlaceId], references: [id], onDelete: SetNull)
+
+  @@index([userId])
+  @@index([userId, createdAt])
+  @@index([createdAt])
+  @@index([sessionId])
+  @@map("search_history")
+}
+
+// =============================================================================
+// USER PREFERENCES & PRIVACY
+// =============================================================================
+
+model UserPreferences {
+  id                    String    @id @default(uuid()) @db.Uuid
+  userId                String    @unique @db.Uuid
+  dietaryRestrictions   Json?     // ["halal", "vegetarian", "gluten-free", "no-pork", ...]
+  cuisinePreferences    Json?     // { malay: 0.8, chinese: 0.7, indian: 0.6, thai: 0.4, ... }
+  activityPreferences   Json?     // ["hiking", "shopping", "sightseeing", "beach", ...]
+  budgetLevel           Int?      // 1=Budget, 2=Mid, 3=Premium, 4=Luxury
+  preferredTransport    Json?     // ["mrt", "grab", "walking"]
+  accessibility         Json?     // { wheelchairAccessible, hearingImpaired, visionImpaired }
+  notificationSettings  Json?     // { push, email, sms, types: { ... } }
+  privacySettings       Json?     // { shareLocation, shareProfile, shareActivity }
+  aiPersonalizationEnabled Boolean @default(true)
+  createdAt             DateTime  @default(now()) @db.Timestamptz()
+  updatedAt             DateTime  @updatedAt @db.Timestamptz()
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("user_preferences")
+}
+
+// =============================================================================
+// LOCATION HISTORY
+// =============================================================================
+
+model LocationHistory {
+  id         String    @id @default(uuid()) @db.Uuid
+  userId     String    @db.Uuid
+  lat        Float
+  lng        Float
+  accuracy   Float?
+  speed      Float?    // Meters per second
+  heading    Float?    // Degrees from north
+  altitude   Float?
+  activity   String?   @db.VarChar(50)  // "still", "walking", "running", "driving", "cycling"
+  placeId    String?   @db.Uuid         // Reverse-geocoded nearest place
+  city       String?   @db.VarChar(100)
+  state      String?   @db.VarChar(100)
+  recordedAt DateTime  @default(now()) @db.Timestamptz()
+
+  user  User  @relation(fields: [userId], references: [id], onDelete: Cascade)
+  place Place? @relation(fields: [placeId], references: [id], onDelete: SetNull)
+
+  @@index([userId, recordedAt], map: "location_history_userId_recordedAt_idx")
+  @@index([userId, recordedAt(sort: Desc)], map: "location_history_userId_recordedAt_desc_idx")
+  @@index([recordedAt])
+  @@index([placeId])
+  @@map("location_history")
+}
+
+// =============================================================================
+// SOCIAL MODELS
+// =============================================================================
+
+model SocialPost {
+  id           String    @id @default(uuid()) @db.Uuid
+  userId       String    @db.Uuid
+  content      String?   @db.Text
+  photos       Json?     // Array of { url, thumbnailUrl, caption, aiTags }
+  placeId      String?   @db.Uuid
+  tripId       String?   @db.Uuid
+  likeCount    Int       @default(0)
+  commentCount Int       @default(0)
+  shareCount   Int       @default(0)
+  viewCount    Int       @default(0)
+  isPublic     Boolean   @default(true)
+  locationLat  Float?
+  locationLng  Float?
+  locationName String?   @db.VarChar(255)
+  createdAt    DateTime  @default(now()) @db.Timestamptz()
+  updatedAt    DateTime  @updatedAt @db.Timestamptz()
+
+  user     User            @relation(fields: [userId], references: [id], onDelete: Cascade)
+  place    Place?          @relation(fields: [placeId], references: [id], onDelete: SetNull)
+  trip     Trip?           @relation(fields: [tripId], references: [id], onDelete: SetNull)
+  comments SocialComment[]
+  likes    SocialLike[]
+
+  @@index([userId])
+  @@index([placeId])
+  @@index([tripId])
+  @@index([createdAt])
+  @@index([likeCount])
+  @@index([userId, createdAt])
+  @@map("social_posts")
+}
+
+model SocialComment {
+  id        String    @id @default(uuid()) @db.Uuid
+  postId    String    @db.Uuid
+  userId    String    @db.Uuid
+  parentId  String?   @db.Uuid     // For nested replies
+  content   String    @db.Text
+  likeCount Int       @default(0)
+  createdAt DateTime  @default(now()) @db.Timestamptz()
+
+  post     SocialPost      @relation(fields: [postId], references: [id], onDelete: Cascade)
+  user     User            @relation(fields: [userId], references: [id], onDelete: Cascade)
+  parent   SocialComment?  @relation("CommentReplies", fields: [parentId], references: [id], onDelete: SetNull)
+  replies  SocialComment[] @relation("CommentReplies")
+
+  @@index([postId])
+  @@index([postId, createdAt])
+  @@index([userId])
+  @@index([parentId])
+  @@map("social_comments")
+}
+
+model SocialLike {
+  id        String    @id @default(uuid()) @db.Uuid
+  postId    String    @db.Uuid
+  userId    String    @db.Uuid
+  createdAt DateTime  @default(now()) @db.Timestamptz()
+
+  post SocialPost @relation(fields: [postId], references: [id], onDelete: Cascade)
+  user User       @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([postId, userId], name: "uq_like_post_user")
+  @@index([postId])
+  @@index([userId])
+  @@map("social_likes")
+}
+
+model UserFollow {
+  id          String    @id @default(uuid()) @db.Uuid
+  followerId  String    @db.Uuid
+  followingId String    @db.Uuid
+  createdAt   DateTime  @default(now()) @db.Timestamptz()
+
+  follower  User @relation("Following", fields: [followerId], references: [id], onDelete: Cascade)
+  following User @relation("Follower", fields: [followingId], references: [id], onDelete: Cascade)
+
+  @@unique([followerId, followingId], name: "uq_follow")
+  @@index([followerId])
+  @@index([followingId])
+  @@index([createdAt])
+  @@map("user_follows")
+}
+
+// =============================================================================
+// CONTENT MODERATION MODELS
+// =============================================================================
+
+model ContentReport {
+  id          String              @id @default(uuid()) @db.Uuid
+  reporterId  String              @db.Uuid
+  reason      ContentReportReason
+  description String?             @db.Text
+  status      ContentReportStatus @default(PENDING)
+  // Polymorphic target (use the relevant FK)
+  targetReviewId String? @db.Uuid
+  targetPhotoId  String? @db.Uuid
+  targetPostId   String? @db.Uuid
+  targetCommentId String? @db.Uuid
+  targetUserId   String? @db.Uuid
+  reviewedBy   String?             @db.Uuid
+  reviewedAt   DateTime?           @db.Timestamptz()
+  resolution   String?             @db.Text
+  createdAt    DateTime            @default(now()) @db.Timestamptz()
+
+  reporter User @relation("ReportedBy", fields: [reporterId], references: [id], onDelete: Cascade)
+
+  @@index([status])
+  @@index([reporterId])
+  @@index([targetReviewId])
+  @@index([targetPostId])
+  @@index([createdAt])
+  @@map("content_reports")
+}
+
+// =============================================================================
+// ANALYTICS / LOGGING MODELS (optional, for internal use)
+// =============================================================================
+
+model ApiAuditLog {
+  id         String    @id @default(uuid()) @db.Uuid
+  userId     String?   @db.Uuid
+  method     String    @db.VarChar(10)
+  path       String    @db.VarChar(500)
+  statusCode Int
+  durationMs Int
+  ipAddress  String?   @db.VarChar(45)
+  userAgent  String?   @db.VarChar(512)
+  requestId  String?   @db.VarChar(100)
+  metadata   Json?
+  createdAt  DateTime  @default(now()) @db.Timestamptz()
+
+  @@index([userId])
+  @@index([path])
+  @@index([statusCode])
+  @@index([createdAt])
+  @@map("api_audit_logs")
+}
+
+model PlaceView {
+  id        String   @id @default(uuid()) @db.Uuid
+  placeId   String   @db.Uuid
+  userId    String?  @db.Uuid
+  source    String?  @db.VarChar(50)  // "search", "map", "nearby", "trip", "social", "ai"
+  place Place? @relation(fields: [placeId], references: [id], onDelete: Cascade)
+  user User?  @relation(fields: [userId], references: [id], onDelete: SetNull)
+
+  createdAt DateTime @default(now()) @db.Timestamptz()
+
+  @@index([placeId, createdAt])
+  @@index([userId])
+  @@index([source])
+  @@map("place_views")
+}
+
+// =============================================================================
+// WEEKEND PLANNER MODELS
+// =============================================================================
+
+model WeekendPlan {
+  id                  String                @id @default(uuid()) @db.Uuid
+  userId              String                @db.Uuid
+  title               String                @db.VarChar(255)
+  description         String?               @db.Text
+
+  destination         String                @db.VarChar(255)
+  destinationLat      Float
+  destinationLng      Float
+  startDate           DateTime              @db.Date
+  endDate             DateTime              @db.Date
+  planType            WeekendPlanType
+  budget              Float
+  budgetCurrency      String                @default("MYR") @db.VarChar(3)
+  transportMode       TransportMode
+  groupType           GroupType
+  travelStyles        WeekendTravelStyle[]
+  specialPreferences  SpecialPreference[]
+  groupSize           Int                   @default(1)
+
+  isAIGenerated       Boolean               @default(true)
+  aiModel             String?               @db.VarChar(50)
+  aiPrompt            String?               @db.Text
+  aiTokensUsed        Int?
+  generationLatencyMs Int?
+  generationVersion   String?               @db.VarChar(20)
+
+  weatherSnapshot     Json?
+
+  status              TripStatus            @default(DRAFT)
+  isPublic            Boolean               @default(false)
+  shareToken          String?               @unique @db.VarChar(64)
+  viewCount           Int                   @default(0)
+  likeCount           Int                   @default(0)
+  cloneCount          Int                   @default(0)
+
+  totalCost           Float?
+  totalDistance       Float?
+  totalTravelTime     Int?
+  totalStops          Int                   @default(0)
+  hiddenGemCount      Int                   @default(0)
+
+  createdAt           DateTime              @default(now()) @db.Timestamptz()
+  updatedAt           DateTime              @updatedAt @db.Timestamptz()
+
+  user              User                     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  days              WeekendPlanDay[]
+  budgetItems       WeekendBudget[]
+  routes            WeekendRoute[]
+  recommendations   WeekendRecommendation[]
+  optimizations     WeekendOptimization[]
+  aiRecommendations AIRecommendation[]
+
+  @@index([userId])
+  @@index([userId, status])
+  @@index([shareToken])
+  @@index([destination])
+  @@index([startDate, endDate])
+  @@index([isPublic, likeCount])
+  @@index([createdAt])
+  @@map("weekend_plans")
+}
+
+model WeekendPlanDay {
+  id              String    @id @default(uuid()) @db.Uuid
+  weekendPlanId   String    @db.Uuid
+  dayNumber       Int
+  date            DateTime  @db.Date
+  theme           String?   @db.VarChar(255)
+  notes           String?   @db.Text
+
+  weatherCondition  String?  @db.VarChar(50)
+  weatherTempMin    Float?
+  weatherTempMax    Float?
+  weatherRainChance Float?
+
+  dayTotalCost     Float?
+  dayTotalDistance Float?
+  dayTotalTime     Int?
+  stopCount        Int       @default(0)
+
+  createdAt       DateTime  @default(now()) @db.Timestamptz()
+
+  weekendPlan WeekendPlan      @relation(fields: [weekendPlanId], references: [id], onDelete: Cascade)
+  stops       WeekendPlanStop[]
+
+  @@unique([weekendPlanId, dayNumber], map: "uq_weekend_day_number")
+  @@index([weekendPlanId])
+  @@map("weekend_plan_days")
+}
+
+model WeekendPlanStop {
+  id              String       @id @default(uuid()) @db.Uuid
+  weekendDayId    String       @db.Uuid
+  placeId         String?      @db.Uuid
+  order           Int
+
+  startTime       String?      @db.VarChar(8)
+  endTime         String?      @db.VarChar(8)
+  durationMinutes Int
+
+  placeName       String       @db.VarChar(255)
+  placeCategory   StopCategory
+  placeEmoji      String?      @db.VarChar(10)
+  description     String?      @db.Text
+  photoUrl        String?      @db.VarChar(2048)
+  rating          Float?
+  priceLevel      Int?
+
+  transportModeFromPrev  TransportMode?
+  distanceFromPrev       Float?
+  travelTimeFromPrev     Int?
+  transportCostFromPrev  Float?
+
+  entryFee        Float?
+  estimatedSpend  Float?
+
+  isHiddenGem     Boolean     @default(false)
+  isPhotoSpot     Boolean     @default(false)
+  isAIGenerated   Boolean     @default(true)
+  aiReasoning     String?     @db.Text
+
+  isIndoor        Boolean     @default(false)
+  crowdLevel      String?     @db.VarChar(20)
+  rainSafe        Boolean     @default(true)
+
+  isLocked        Boolean     @default(false)
+  userNote        String?     @db.Text
+  userRating      Int?
+
+  createdAt       DateTime    @default(now()) @db.Timestamptz()
+
+  weekendDay  WeekendPlanDay  @relation(fields: [weekendDayId], references: [id], onDelete: Cascade)
+  place       Place?          @relation(fields: [placeId], references: [id], onDelete: SetNull)
+  routesFrom  WeekendRoute[]  @relation("RouteFromStop")
+  routesTo    WeekendRoute[]  @relation("RouteToStop")
+
+  @@index([weekendDayId])
+  @@index([weekendDayId, order])
+  @@index([placeId])
+  @@map("weekend_plan_stops")
+}
+
+model WeekendBudget {
+  id              String       @id @default(uuid()) @db.Uuid
+  weekendPlanId   String       @db.Uuid
+  category        CostCategory
+  label           String       @db.VarChar(100)
+
+  estimatedCost   Float
+  actualCost      Float?
+  currency        String       @default("MYR") @db.VarChar(3)
+
+  breakdown       Json?
+  percentageOfTotal Float?
+
+  notes           String?      @db.Text
+  createdAt       DateTime     @default(now()) @db.Timestamptz()
+
+  weekendPlan WeekendPlan @relation(fields: [weekendPlanId], references: [id], onDelete: Cascade)
+
+  @@unique([weekendPlanId, category], map: "uq_weekend_budget_category")
+  @@index([weekendPlanId])
+  @@map("weekend_budgets")
+}
+
+model WeekendRoute {
+  id              String              @id @default(uuid()) @db.Uuid
+  weekendPlanId   String              @db.Uuid
+  dayNumber       Int
+
+  fromStopId      String?             @db.Uuid
+  toStopId        String?             @db.Uuid
+  transportMode   TransportMode
+
+  polyline        String?             @db.Text
+  distanceMeters  Float
+  durationSeconds Float
+  durationInTrafficSeconds Float?
+
+  fuelCost        Float?
+  tollCost        Float?
+  parkingCost     Float?
+  grabEstimate    Float?
+  totalCost       Float?
+  currency        String              @default("MYR") @db.VarChar(3)
+
+  strategy        OptimizationStrategy @default(BALANCED)
+  trafficLevel    String?             @db.VarChar(20)
+
+  alternatives    Json?
+
+  createdAt       DateTime            @default(now()) @db.Timestamptz()
+
+  weekendPlan   WeekendPlan      @relation(fields: [weekendPlanId], references: [id], onDelete: Cascade)
+  fromStop      WeekendPlanStop? @relation("RouteFromStop", fields: [fromStopId], references: [id], onDelete: SetNull)
+  toStop        WeekendPlanStop? @relation("RouteToStop", fields: [toStopId], references: [id], onDelete: SetNull)
+
+  @@index([weekendPlanId])
+  @@index([weekendPlanId, dayNumber])
+  @@index([fromStopId])
+  @@index([toStopId])
+  @@map("weekend_routes")
+}
+
+model WeekendRecommendation {
+  id              String    @id @default(uuid()) @db.Uuid
+  weekendPlanId   String    @db.Uuid
+  stopId          String?   @db.Uuid
+  dayNumber       Int?
+  type            String    @db.VarChar(50)
+
+  placeId         String?   @db.Uuid
+  placeName       String    @db.VarChar(255)
+  placeCategory   String?   @db.VarChar(100)
+  description     String?   @db.Text
+  photoUrl        String?   @db.VarChar(2048)
+  rating          Float?
+  estimatedCost   Float?
+  currency        String    @default("MYR") @db.VarChar(3)
+
+  relevanceScore  Float
+  reasoning       String?   @db.Text
+
+  isAccepted      Boolean   @default(false)
+  isDismissed     Boolean   @default(false)
+
+  createdAt       DateTime  @default(now()) @db.Timestamptz()
+
+  weekendPlan WeekendPlan      @relation(fields: [weekendPlanId], references: [id], onDelete: Cascade)
+  place       Place?           @relation(fields: [placeId], references: [id], onDelete: SetNull)
+
+  @@index([weekendPlanId])
+  @@index([stopId])
+  @@index([isAccepted])
+  @@map("weekend_recommendations")
+}
+
+model WeekendOptimization {
+  id              String              @id @default(uuid()) @db.Uuid
+  weekendPlanId   String              @db.Uuid
+
+  strategy        OptimizationStrategy
+  version         Int
+
+  previousTotalDistance  Float?
+  optimizedTotalDistance Float?
+  distanceSaved          Float?
+  previousTotalTime      Int?
+  optimizedTotalTime     Int?
+  timeSaved              Int?
+  previousTotalCost      Float?
+  optimizedTotalCost     Float?
+  costSaved              Float?
+
+  factorsConsidered Json?
+  originalOrder     Json?
+  optimizedOrder    Json?
+
+  createdAt       DateTime            @default(now()) @db.Timestamptz()
+
+  weekendPlan WeekendPlan @relation(fields: [weekendPlanId], references: [id], onDelete: Cascade)
+
+  @@index([weekendPlanId])
+  @@index([weekendPlanId, version])
+  @@map("weekend_optimizations")
+}
+
+// =============================================================================
+// 💕 AI DATING PLANNER — Complete Dating Platform Models
+// =============================================================================
+
+enum RelationshipStage {
+  FIRST_DATE
+  SECOND_DATE
+  NEW_COUPLE
+  LONG_TERM_COUPLE
+  MARRIED_COUPLE
+}
+
+enum DateType {
+  ROMANTIC
+  ADVENTURE
+  CAFE
+  LUXURY
+  FOOD_HUNT
+  NATURE
+  BEACH
+  NIGHTLIFE
+}
+
+enum DateStatus {
+  PLANNED
+  ACTIVE
+  COMPLETED
+  CANCELLED
+  RESCHEDULED
+}
+
+model DatePlan {
+  id              String            @id @default(uuid()) @db.Uuid
+  userId          String            @db.Uuid
+
+  // Inputs
+  city            String            @db.VarChar(255)
+  budget          Float
+  durationHours   Int               @default(4)
+  transportMode   String            @default("DRIVING") @db.VarChar(30)
+  relationshipStage RelationshipStage
+  dateType        DateType
+
+  // AI Outputs
+  title           String            @db.VarChar(255)
+  overview        String?           @db.Text
+  aiModel         String?           @db.VarChar(50)
+  isAIGenerated   Boolean           @default(false)
+
+  // Timeline
+  startTime       String?           @db.VarChar(10)
+  endTime         String?           @db.VarChar(10)
+
+  // Budget Breakdown (computed)
+  travelCost      Float             @default(0)
+  foodCost        Float             @default(0)
+  activityCost    Float             @default(0)
+  parkingCost     Float             @default(0)
+  giftCost        Float             @default(0)
+  totalCost       Float             @default(0)
+
+  // AI Scoring
+  romanceScore        Int           @default(0)
+  conversationScore   Int           @default(0)
+  privacyScore        Int           @default(0)
+  budgetScore         Int           @default(0)
+  photoOppScore       Int           @default(0)
+  overallScore        Int           @default(0)
+
+  // Special Features
+  rainBackupPlan      String?       @db.Text
+  indoorBackupPlan    String?       @db.Text
+  trafficBackupPlan   String?       @db.Text
+  sunsetTiming        String?       @db.VarChar(20)
+  goldenHourTiming    String?       @db.VarChar(20)
+  crowdLevel          String?       @db.VarChar(20)
+  bestPhotoSpots      Json?
+
+  // Route
+  walkingRoute        Json?
+  drivingRoute        Json?
+  alternativeRoute    Json?
+
+  // Metadata
+  status              DateStatus    @default(PLANNED)
+  createdAt           DateTime      @default(now()) @db.Timestamptz()
+  updatedAt           DateTime      @updatedAt @db.Timestamptz()
+
+  // Relations
+  user            User               @relation(fields: [userId], references: [id], onDelete: Cascade)
+  activities      DateActivity[]
+  scores          DateScore[]
+  history         DateHistory[]
+
+  @@index([userId])
+  @@index([userId, status])
+  @@index([city])
+  @@map("date_plans")
+}
+
+model DateActivity {
+  id              String            @id @default(uuid()) @db.Uuid
+  datePlanId      String            @db.Uuid
+  order           Int
+
+  // Activity Details
+  timeSlot        String            @db.VarChar(20)
+  activityType    String            @db.VarChar(50)
+  placeName       String            @db.VarChar(255)
+  placeId         String?           @db.Uuid
+  category        String?           @db.VarChar(50)
+  description     String?           @db.Text
+
+  // Timing
+  suggestedArrival  String?         @db.VarChar(10)
+  durationMinutes   Int             @default(60)
+  travelTimeFromPrev Int?           // minutes from previous activity
+
+  // Cost
+  estimatedCost     Float           @default(0)
+  currency          String          @default("MYR") @db.VarChar(3)
+
+  // Enrichment
+  photoUrl          String?         @db.VarChar(2048)
+  rating            Float?
+  address           String?         @db.VarChar(512)
+  notes             String?         @db.Text
+  isIndoor          Boolean         @default(false)
+  isPhotoSpot       Boolean         @default(false)
+  isBackupPlan      Boolean         @default(false)
+
+  createdAt         DateTime        @default(now()) @db.Timestamptz()
+
+  datePlan  DatePlan  @relation(fields: [datePlanId], references: [id], onDelete: Cascade)
+  place     Place?    @relation(fields: [placeId], references: [id], onDelete: SetNull)
+
+  @@index([datePlanId])
+  @@index([datePlanId, order])
+  @@map("date_activities")
+}
+
+model DateScore {
+  id              String            @id @default(uuid()) @db.Uuid
+  datePlanId      String            @db.Uuid
+
+  category        String            @db.VarChar(50)
+  score           Int
+  maxScore        Int               @default(100)
+  reasoning       String?           @db.Text
+  tips            Json?
+
+  createdAt       DateTime          @default(now()) @db.Timestamptz()
+
+  datePlan  DatePlan  @relation(fields: [datePlanId], references: [id], onDelete: Cascade)
+
+  @@index([datePlanId])
+  @@index([datePlanId, category])
+  @@map("date_scores")
+}
+
+model DateHistory {
+  id              String            @id @default(uuid()) @db.Uuid
+  datePlanId      String            @db.Uuid
+  userId          String            @db.Uuid
+
+  status          DateStatus
+  actualStartTime String?           @db.VarChar(10)
+  actualEndTime   String?           @db.VarChar(10)
+  actualTotalCost Float?
+  rating          Int?
+  feedback        String?           @db.Text
+  photos          Json?
+
+  createdAt       DateTime          @default(now()) @db.Timestamptz()
+
+  datePlan  DatePlan  @relation(fields: [datePlanId], references: [id], onDelete: Cascade)
+  user      User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([datePlanId])
+  @@index([userId])
+  @@index([userId, createdAt(sort: Desc)])
+  @@map("date_history")
+}
+
+// =============================================================================
+// 💰 TRAVEL WALLET — Savings Goals, Couple/Group Wallets, AI Coach
+// =============================================================================
+
+enum WalletType {
+  SOLO
+  COUPLE
+  GROUP
+}
+
+enum GoalStatus {
+  ACTIVE
+  COMPLETED
+  PAUSED
+  CANCELLED
+}
+
+enum ContributionFrequency {
+  DAILY
+  WEEKLY
+  MONTHLY
+  ONE_TIME
+}
+
+model TravelGoal {
+  id              String            @id @default(uuid()) @db.Uuid
+  userId          String            @db.Uuid
+  walletType      WalletType        @default(SOLO)
+
+  // Goal Details
+  tripName        String            @db.VarChar(255)
+  destination     String            @db.VarChar(255)
+  targetAmount    Float
+  targetDate      DateTime          @db.Timestamptz()
+  description     String?           @db.Text
+  coverPhoto      String?           @db.VarChar(2048)
+
+  // Progress Tracking
+  currentSavings  Float             @default(0)
+  remainingAmount Float
+  progressPct     Float             @default(0)
+  forecastDate    DateTime?         @db.Timestamptz()
+
+  // AI Coach
+  dailyTarget     Float?
+  weeklyTarget    Float?
+  monthlyTarget   Float?
+  budgetFeasibility Float?
+  affordabilityScore Int?
+
+  // Travel Wishlist
+  estimatedTripCost   Float?
+  recommendedBudget   Float?
+  accommodationEst    Float?
+  transportEst        Float?
+  foodEst             Float?
+  activitiesEst       Float?
+
+  // Metadata
+  status          GoalStatus        @default(ACTIVE)
+  currency        String            @default("MYR") @db.VarChar(3)
+  isPublic        Boolean           @default(false)
+  createdAt       DateTime          @default(now()) @db.Timestamptz()
+  updatedAt       DateTime          @updatedAt @db.Timestamptz()
+
+  // Relations
+  user            User              @relation(fields: [userId], references: [id], onDelete: Cascade)
+  contributions   Contribution[]
+  milestones      TravelMilestone[]
+  coupleWallet    CoupleWallet?
+  groupWallet     GroupWallet?
+
+  @@index([userId])
+  @@index([userId, status])
+  @@index([walletType])
+  @@map("travel_goals")
+}
+
+model Contribution {
+  id              String            @id @default(uuid()) @db.Uuid
+  goalId          String            @db.Uuid
+  userId          String            @db.Uuid
+  amount          Float
+  frequency       ContributionFrequency @default(ONE_TIME)
+  note            String?           @db.VarChar(500)
+  createdAt       DateTime          @default(now()) @db.Timestamptz()
+
+  goal    TravelGoal  @relation(fields: [goalId], references: [id], onDelete: Cascade)
+  user    User        @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([goalId])
+  @@index([goalId, createdAt(sort: Desc)])
+  @@index([userId])
+  @@map("contributions")
+}
+
+model CoupleWallet {
+  id              String            @id @default(uuid()) @db.Uuid
+  goalId          String            @db.Uuid @unique
+  partner1Id      String            @db.Uuid
+  partner2Id      String            @db.Uuid
+
+  // Combined Progress
+  partner1Savings   Float           @default(0)
+  partner2Savings   Float           @default(0)
+  combinedSavings   Float           @default(0)
+  monthlySavings    Float           @default(0)
+
+  // Love + Travel
+  loveProgress      Int             @default(0)
+  travelReadiness   Int             @default(0)
+
+  // Countdown
+  daysUntilTrip     Int?
+  milestone25       Boolean         @default(false)
+  milestone50       Boolean         @default(false)
+  milestone75       Boolean         @default(false)
+  milestone100      Boolean         @default(false)
+
+  createdAt         DateTime        @default(now()) @db.Timestamptz()
+  updatedAt         DateTime        @updatedAt @db.Timestamptz()
+
+  goal        TravelGoal  @relation(fields: [goalId], references: [id], onDelete: Cascade)
+  partner1    User        @relation("CouplePartner1", fields: [partner1Id], references: [id], onDelete: Cascade)
+  partner2    User        @relation("CouplePartner2", fields: [partner2Id], references: [id], onDelete: Cascade)
+
+  @@index([partner1Id])
+  @@index([partner2Id])
+  @@map("couple_wallets")
+}
+
+model GroupWallet {
+  id              String            @id @default(uuid()) @db.Uuid
+  goalId          String            @db.Uuid @unique
+  adminId         String            @db.Uuid
+  groupName       String            @db.VarChar(255)
+
+  // Members (JSON for flexibility — stores userId, name, avatar, contribution)
+  members         Json              @default("[]")
+
+  // Progress
+  totalTarget     Float
+  totalContributed Float            @default(0)
+  remainingBalance Float
+  memberCount     Int               @default(2)
+  tripReadiness   Int               @default(0)
+
+  // Leaderboard (JSON)
+  leaderboard     Json?
+
+  createdAt       DateTime          @default(now()) @db.Timestamptz()
+  updatedAt       DateTime          @updatedAt @db.Timestamptz()
+
+  goal    TravelGoal  @relation(fields: [goalId], references: [id], onDelete: Cascade)
+  admin   User        @relation(fields: [adminId], references: [id], onDelete: Cascade)
+
+  @@index([adminId])
+  @@index([goalId])
+  @@map("group_wallets")
+}
+
+model TravelMilestone {
+  id              String            @id @default(uuid()) @db.Uuid
+  goalId          String            @db.Uuid
+  milestone       Int               // 25, 50, 75, 100
+  title           String            @db.VarChar(255)
+  badgeEmoji      String            @db.VarChar(10)
+  unlockedAt      DateTime          @default(now()) @db.Timestamptz()
+
+  goal    TravelGoal  @relation(fields: [goalId], references: [id], onDelete: Cascade)
+
+  @@index([goalId])
+  @@index([goalId, milestone])
+  @@map("travel_milestones")
+}
+
+// =============================================================================
+// VIEWS & MATERIALIZED DATA (PostgreSQL Views — manual migration)
+// =============================================================================
+//
+// -- Place leaderboard by category
+// CREATE MATERIALIZED VIEW place_leaderboard AS
+// SELECT category, city, id, name, rating, reviewCount, trendingScore
+// FROM places
+// WHERE is_permanently_closed = false
+// ORDER BY category, city, trendingScore DESC;
+//
+// -- User stats summary
+// CREATE VIEW user_stats_summary AS
+// SELECT u.id, u.display_name, p.level, p.xp, p.reviews_count,
+//        p.followers_count, p.photos_count, p.achievements_count
+// FROM users u JOIN profiles p ON u.id = p.user_id
+// WHERE u.is_deleted = false;
+//
+// -- Daily active users
+// CREATE MATERIALIZED VIEW daily_active_users AS
+// SELECT date_trunc('day', created_at) as day, count(distinct user_id) as dau
+// FROM location_history
+// GROUP BY day
+// ORDER BY day DESC;
+// =============================================================================

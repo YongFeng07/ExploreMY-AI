@@ -1,0 +1,104 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>API Test</title>
+<style>
+body{font-family:system-ui;background:#0A0A14;color:white;padding:20px;max-width:500px;margin:0 auto}
+input,button,select{padding:12px;margin:5px 0;width:100%;box-sizing:border-box;border-radius:12px;border:1px solid #333;background:#1a1a2e;color:white;font-size:16px}
+button{background:linear-gradient(135deg,#FF6B9D,#C084FC);border:none;font-weight:bold;cursor:pointer;margin-top:15px}
+button:disabled{opacity:0.3}
+.card{background:rgba(255,255,255,0.05);padding:15px;border-radius:16px;margin:10px 0;border:1px solid rgba(255,255,255,0.1)}
+pre{background:#111;padding:10px;border-radius:8px;overflow-x:auto;font-size:11px;max-height:300px;overflow-y:auto}
+.loading{display:none;text-align:center;padding:30px}
+</style>
+</head>
+<body>
+<h1>🧠 Weekend Planner Test</h1>
+
+<input id="dest" placeholder="Destination (e.g. Penang, Bali, Tokyo)" value="Penang">
+<input id="start" type="date" value="2026-06-21">
+<input id="end" type="date" value="2026-06-22">
+<input id="budget" type="number" value="500" placeholder="Budget (MYR)">
+<select id="transport"><option>GRAB</option><option>DRIVING</option></select>
+<button id="btn" onclick="generate()">✨ Generate Plan</button>
+
+<div class="loading" id="loading">🧠 Generating... please wait ~10s</div>
+<div id="result"></div>
+
+<script>
+async function generate() {
+  const dest = document.getElementById('dest').value;
+  if (!dest) return alert('Type a destination');
+
+  document.getElementById('btn').disabled = true;
+  document.getElementById('loading').style.display = 'block';
+  document.getElementById('result').innerHTML = '';
+
+  const body = {
+    destination: dest,
+    destinationLat: 0, destinationLng: 0,
+    startDate: document.getElementById('start').value,
+    endDate: document.getElementById('end').value,
+    planType: 'TWO_DAY',
+    budget: parseInt(document.getElementById('budget').value),
+    budgetCurrency: 'MYR',
+    transportMode: document.getElementById('transport').value,
+    groupType: 'COUPLE',
+    travelStyles: ['FOODIE'],
+    specialPreferences: [],
+    groupSize: 2
+  };
+
+  try {
+    const res = await fetch('http://localhost:3001/api/v1/weekend-planner/generate', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'x-user-id': 'demo' },
+      body: JSON.stringify(body)
+    });
+    const data = await res.json();
+
+    if (data.error) {
+      document.getElementById('result').innerHTML = '<p style="color:red">Error: ' + data.error + '</p>';
+    } else {
+      const plan = data.data;
+      let html = '<h2>✅ ' + plan.title + '</h2>';
+      html += '<p>📍 ' + plan.destination + ' | 💰 RM ' + plan.totalCost + ' | 📍 ' + plan.totalStops + ' stops</p>';
+
+      plan.days.forEach(day => {
+        html += '<div class="card"><h3>Day ' + day.dayNumber + ': ' + day.theme + '</h3>';
+        day.stops.forEach(stop => {
+          html += '<div class="card" style="margin:5px 0">';
+          html += '<strong>' + stop.emoji + ' ' + stop.placeName + '</strong> (' + stop.time + ')<br>';
+          html += '<small>' + stop.description + '</small><br>';
+          html += '<small>⭐ ' + (stop.rating||'?') + ' | 💰 RM' + (stop.estimatedSpend+(stop.entryFee||0)) + '</small>';
+
+          if (stop.transportOptions && stop.transportOptions.length > 0) {
+            html += '<br><small>🚀 Transport:</small><br>';
+            stop.transportOptions.forEach(t => {
+              html += '<small>' + t.mode + ': ' + t.durationMin + 'min ~RM' + t.costEstimate + ' | </small>';
+            });
+          }
+
+          if (stop.photos && stop.photos.length > 0) {
+            html += '<br><small>📸 ' + stop.photos.length + ' photos</small>';
+          }
+
+          html += '</div>';
+        });
+        html += '</div>';
+      });
+
+      document.getElementById('result').innerHTML = html;
+    }
+  } catch(e) {
+    document.getElementById('result').innerHTML = '<p style="color:red">Failed: ' + e.message + '</p>';
+  }
+
+  document.getElementById('btn').disabled = false;
+  document.getElementById('loading').style.display = 'none';
+}
+</script>
+</body>
+</html>

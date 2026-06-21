@@ -1,0 +1,128 @@
+name: Deploy — Production
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+concurrency:
+  group: production-deploy
+  cancel-in-progress: false
+
+env:
+  NODE_VERSION: 20
+  PNPM_VERSION: 9.15.4
+
+jobs:
+  # ── Deploy Frontend (Vercel) ────────────────────────────────────────────────
+  deploy-web:
+    name: Deploy Web to Vercel
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    environment:
+      name: production
+      url: https://exploremy.ai
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install Vercel CLI
+        run: npm install -g vercel
+
+      - name: Deploy to Vercel
+        run: |
+          vercel pull --yes --environment=production --token=${{ secrets.VERCEL_TOKEN }}
+          vercel build --prod --token=${{ secrets.VERCEL_TOKEN }}
+          vercel deploy --prebuilt --prod --token=${{ secrets.VERCEL_TOKEN }}
+        env:
+          VERCEL_ORG_ID: ${{ secrets.VERCEL_ORG_ID }}
+          VERCEL_PROJECT_ID: ${{ secrets.VERCEL_PROJECT_ID }}
+
+  # ── Deploy Backend (Railway) ────────────────────────────────────────────────
+  deploy-api:
+    name: Deploy API to Railway
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    environment:
+      name: production
+      url: https://api.exploremy.ai
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install Railway CLI
+        run: npm install -g @railway/cli
+
+      - name: Deploy to Railway
+        run: railway up --service exploremy-api --environment production
+        env:
+          RAILWAY_TOKEN: ${{ secrets.RAILWAY_TOKEN }}
+
+  # ── Database Migration ──────────────────────────────────────────────────────
+  migrate-db:
+    name: Run Database Migrations
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    needs: [deploy-api]
+    environment:
+      name: production
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+        with:
+          version: ${{ env.PNPM_VERSION }}
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: "pnpm"
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile --filter @exploremy/database
+
+      - name: Run migrations
+        run: pnpm --filter @exploremy/database exec prisma migrate deploy
+        env:
+          DATABASE_URL: ${{ secrets.DATABASE_URL }}
+
+  # ── Health Check ────────────────────────────────────────────────────────────
+  health-check:
+    name: Post-Deploy Health Check
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    needs: [deploy-web, deploy-api, migrate-db]
+    steps:
+      - name: Check Web Health
+        run: |
+          curl --fail --retry 5 --retry-delay 10 https://exploremy.ai/api/health || exit 1
+
+      - name: Check API Health
+        run: |
+          curl --fail --retry 5 --retry-delay 10 https://api.exploremy.ai/health || exit 1
+
+  # ── Notify ──────────────────────────────────────────────────────────────────
+  notify:
+    name: Send Deployment Notification
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    needs: [health-check]
+    if: always()
+    steps:
+      - name: Notify Success
+        if: success()
+        uses: slackapi/slack-github-action@v2
+        with:
+          webhook: ${{ secrets.SLACK_DEPLOY_WEBHOOK }}
+          webhook-type: incoming-webhook
+          payload: |
+            {
+              "text": "✅ ExploreMY AI deployed to production successfully!\n• Web: https://exploremy.ai\n• API: https://api.exploremy.ai"
+            }
+
+      - name: Notify Failure
+        if: failure()
+        uses: slackapi/slack-github-action@v2
+        with:
+          webhook: ${{ secrets.SLACK_DEPLOY_WEBHOOK }}
+          webhook-type: incoming-webhook
+          payload: |
+            {
+              "text": "❌ ExploreMY AI production deployment FAILED!\nCheck: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}"
+            }

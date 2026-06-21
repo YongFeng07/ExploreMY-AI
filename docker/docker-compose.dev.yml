@@ -1,0 +1,76 @@
+# =============================================================================
+# ExploreMY AI — Local Development Docker Compose
+# =============================================================================
+# Start: pnpm docker:dev
+# Stop:  pnpm docker:dev:down
+# =============================================================================
+
+version: "3.9"
+
+services:
+  postgres:
+    image: postgis/postgis:16-3.4
+    container_name: exploremy-postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: exploremy
+      POSTGRES_PASSWORD: exploremy
+      POSTGRES_DB: exploremy_dev
+    ports:
+      - "5432:5432"
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+      - ./init-db.sql:/docker-entrypoint-initdb.d/init-db.sql:ro
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U exploremy -d exploremy_dev"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - exploremy-net
+
+  redis:
+    image: redis:7-alpine
+    container_name: exploremy-redis
+    restart: unless-stopped
+    ports:
+      - "6379:6379"
+    command: redis-server --appendonly yes --requirepass redisdev
+    volumes:
+      - redisdata:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "--raw", "incr", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - exploremy-net
+
+  redisinsight:
+    image: redis/redisinsight:latest
+    container_name: exploremy-redisinsight
+    restart: unless-stopped
+    ports:
+      - "5540:5540"
+    volumes:
+      - redisinsight:/data
+    networks:
+      - exploremy-net
+
+  # Optional: Local Supabase for storage development
+  # supabase:
+  #   image: supabase/supabase-local:latest
+  #   ...
+
+volumes:
+  pgdata:
+    name: exploremy-pgdata
+  redisdata:
+    name: exploremy-redisdata
+  redisinsight:
+    name: exploremy-redisinsight
+
+networks:
+  exploremy-net:
+    name: exploremy-net
+    driver: bridge

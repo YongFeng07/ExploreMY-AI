@@ -1,0 +1,63 @@
+# =============================================================================
+# ExploreMY AI — NestJS Backend Production Dockerfile
+# =============================================================================
+# Build: docker build -f docker/Dockerfile.api -t exploremy-api .
+# Run:   docker run -p 3001:3001 exploremy-api
+# =============================================================================
+
+FROM node:20-alpine AS base
+ENV PNPM_HOME="/pnpm"
+ENV PATH="$PNPM_HOME:$PATH"
+RUN corepack enable && corepack prepare pnpm@9.15.4 --activate
+WORKDIR /app
+
+# ── Dependencies ──────────────────────────────────────────────────────────────
+FROM base AS deps
+COPY package.json pnpm-lock.yaml pnpm-workspace.yaml ./
+COPY apps/api/package.json ./apps/api/
+COPY packages/shared/package.json ./packages/shared/
+COPY packages/database/package.json ./packages/database/
+COPY packages/config/package.json ./packages/config/
+COPY tooling/eslint/package.json ./tooling/eslint/
+COPY tooling/typescript/package.json ./tooling/typescript/
+
+RUN pnpm install --frozen-lockfile --filter @exploremy/api
+
+# ── Builder ───────────────────────────────────────────────────────────────────
+FROM base AS builder
+COPY --from=deps /app/node_modules ./node_modules
+COPY . .
+
+RUN pnpm turbo run db:generate --filter=@exploremy/database
+RUN pnpm turbo run build --filter=@exploremy/api
+
+# ── Pruner (Production Deps) ──────────────────────────────────────────────────
+FROM base AS pruner
+COPY --from=deps /app/node_modules ./node_modules
+COPY . .
+RUN pnpm --filter=@exploremy/api --prod deploy /app/prod
+
+# ── Runner ────────────────────────────────────────────────────────────────────
+FROM node:20-alpine AS runner
+WORKDIR /app
+
+ENV NODE_ENV=production
+
+RUN addgroup --system --gid 1001 nodejs
+RUN adduser --system --uid 1001 nestjs
+
+COPY --from=pruner /app/prod/node_modules ./node_modules
+COPY --from=builder /app/apps/api/dist ./dist
+COPY --from=builder /app/apps/api/package.json ./
+COPY --from=builder /app/packages/database/prisma ./prisma
+
+USER nestjs
+
+EXPOSE 3001
+ENV PORT=3001
+
+# ── Health Check ──
+HEALTHCHECK --interval=30s --timeout=5s --retries=3 --start-period=15s \
+  CMD wget --no-verbose --tries=1 --spider http://localhost:3001/api/v1/health || exit 1
+
+CMD ["node", "dist/main.js"]

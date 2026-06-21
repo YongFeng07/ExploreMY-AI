@@ -1,0 +1,71 @@
+{
+  "common": {
+    "appName": "ExploreMY",
+    "tagline": "Penemuan perjalanan berkuasa AI",
+    "loading": "Memuat...",
+    "error": "Ada sesuatu yang tidak kena",
+    "retry": "Cuba lagi",
+    "save": "Simpan",
+    "cancel": "Batal",
+    "delete": "Padam",
+    "edit": "Sunting",
+    "close": "Tutup",
+    "back": "Kembali",
+    "next": "Seterusnya",
+    "done": "Selesai",
+    "search": "Cari",
+    "noResults": "Tiada hasil dijumpai",
+    "viewAll": "Lihat semua",
+    "seeMore": "Lihat lagi"
+  },
+  "nav": {
+    "explore": "Teroka",
+    "plan": "Rancang",
+    "trips": "Perjalanan",
+    "profile": "Profil",
+    "feed": "Suapan"
+  },
+  "landing": {
+    "heroTitle": "Terokai Malaysia Seperti Tidak Pernah Sebelum Ini",
+    "heroSubtitle": "Platform perjalanan berkuasa AI yang menggantikan Google Maps, TripAdvisor, dan ChatGPT — dibina khas untuk meneroka setiap pelosok Malaysia.",
+    "startExploring": "Mula Meneroka Percuma",
+    "seeDemo": "Lihat Demo",
+    "alreadyAccount": "Sudah ada akaun?",
+    "signIn": "Log masuk",
+    "stats": {
+      "places": "Tempat Dipetakan",
+      "gems": "Permata Tersembunyi",
+      "transport": "Mod Pengangkutan"
+    }
+  },
+  "auth": {
+    "login": "Log Masuk",
+    "register": "Daftar",
+    "logout": "Log Keluar",
+    "email": "E-mel",
+    "password": "Kata Laluan",
+    "forgotPassword": "Lupa kata laluan?",
+    "noAccount": "Tiada akaun?",
+    "hasAccount": "Sudah ada akaun?"
+  },
+  "places": {
+    "open": "Buka",
+    "closed": "Tutup",
+    "rating": "Penilaian",
+    "reviews": "ulasan",
+    "distance": "km jauhnya",
+    "directions": "Dapatkan Arah",
+    "save": "Simpan Tempat",
+    "hiddenGem": "Permata Tersembunyi",
+    "trending": "Trending"
+  },
+  "trips": {
+    "create": "Cipta Perjalanan",
+    "plan": "Rancang Perjalanan",
+    "days": "hari",
+    "budget": "Belanjawan",
+    "public": "Awam",
+    "completed": "Selesai",
+    "draft": "Draf"
+  }
+}

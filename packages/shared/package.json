@@ -1,0 +1,29 @@
+{
+  "name": "@exploremy/shared",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Shared types, constants, utilities, and validation schemas for ExploreMY AI",
+  "main": "./src/index.ts",
+  "types": "./src/index.ts",
+  "exports": {
+    ".": "./src/index.ts",
+    "./types": "./src/types/index.ts",
+    "./enums": "./src/enums/index.ts",
+    "./constants": "./src/constants/index.ts",
+    "./utils": "./src/utils/index.ts",
+    "./validation": "./src/validation/index.ts"
+  },
+  "scripts": {
+    "lint": "eslint src/",
+    "lint:fix": "eslint src/ --fix",
+    "type-check": "tsc --noEmit",
+    "clean": "rm -rf dist .turbo"
+  },
+  "dependencies": {
+    "zod": "^3.24.1"
+  },
+  "devDependencies": {
+    "@exploremy/config": "workspace:*",
+    "typescript": "^5.7.2"
+  }
+}

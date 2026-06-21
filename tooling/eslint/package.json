@@ -1,0 +1,26 @@
+{
+  "name": "@exploremy/eslint-config",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Shared ESLint configurations for ExploreMY AI",
+  "main": "./base.js",
+  "exports": {
+    "./base": "./base.js",
+    "./next": "./next.js",
+    "./nest": "./nest.js"
+  },
+  "dependencies": {
+    "@typescript-eslint/eslint-plugin": "^8.18.0",
+    "@typescript-eslint/parser": "^8.18.0",
+    "eslint-config-next": "^15.1.0",
+    "eslint-config-prettier": "^9.1.0",
+    "eslint-config-turbo": "^2.3.3",
+    "eslint-plugin-import": "^2.31.0",
+    "eslint-plugin-react": "^7.37.2",
+    "eslint-plugin-react-hooks": "^5.1.0",
+    "eslint-plugin-unicorn": "^56.0.1"
+  },
+  "peerDependencies": {
+    "eslint": "^9.0.0"
+  }
+}

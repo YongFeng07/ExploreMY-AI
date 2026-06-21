@@ -1,0 +1,21 @@
+{
+  "extends": "@exploremy/tsconfig/next",
+  "compilerOptions": {
+    "baseUrl": ".",
+    "paths": {
+      "@/*": ["./src/*"],
+      "@exploremy/shared": ["../../packages/shared/src/index.ts"],
+      "@exploremy/shared/*": ["../../packages/shared/src/*"],
+      "@exploremy/ui": ["../../packages/ui/src/index.ts"],
+      "@exploremy/ui/*": ["../../packages/ui/src/*"],
+      "@exploremy/database": ["../../packages/database/src/index.ts"]
+    }
+  },
+  "include": [
+    "next-env.d.ts",
+    "**/*.ts",
+    "**/*.tsx",
+    ".next/types/**/*.ts"
+  ],
+  "exclude": ["node_modules", ".next", "dist"]
+}

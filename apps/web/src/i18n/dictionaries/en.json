@@ -1,0 +1,92 @@
+{
+  "common": {
+    "appName": "ExploreMY",
+    "tagline": "AI-powered travel discovery",
+    "loading": "Loading...",
+    "error": "Something went wrong",
+    "retry": "Try again",
+    "save": "Save",
+    "cancel": "Cancel",
+    "delete": "Delete",
+    "edit": "Edit",
+    "close": "Close",
+    "back": "Back",
+    "next": "Next",
+    "done": "Done",
+    "search": "Search",
+    "noResults": "No results found",
+    "viewAll": "View all",
+    "seeMore": "See more"
+  },
+  "nav": {
+    "explore": "Explore",
+    "plan": "Plan",
+    "trips": "Trips",
+    "profile": "Profile",
+    "feed": "Feed"
+  },
+  "landing": {
+    "heroTitle": "Discover Malaysia Like Never Before",
+    "heroSubtitle": "AI-powered travel intelligence that replaces Google Maps, TripAdvisor, and ChatGPT — built specifically for exploring every corner of Malaysia.",
+    "startExploring": "Start Exploring Free",
+    "seeDemo": "See Demo",
+    "alreadyAccount": "Already have an account?",
+    "signIn": "Sign in",
+    "stats": {
+      "places": "Places Mapped",
+      "gems": "Hidden Gems",
+      "transport": "Transport Modes"
+    },
+    "features": {
+      "title": "Everything in One App",
+      "subtitle": "No more switching between 5 different apps",
+      "discovery": "Smart Discovery",
+      "transport": "All Transport Modes",
+      "aiPlanner": "AI Trip Planner",
+      "hiddenGems": "Hidden Gems Engine",
+      "food": "Food Intelligence",
+      "reviews": "Verified Reviews"
+    },
+    "howItWorks": {
+      "title": "How It Works",
+      "subtitle": "Three steps to your perfect adventure",
+      "step1": "Tell us your vibe",
+      "step2": "AI builds your plan",
+      "step3": "Explore with confidence"
+    },
+    "cta": {
+      "title": "Ready to fall in love with Malaysia?",
+      "subtitle": "Your AI travel companion is ready. Free forever. No credit card needed."
+    }
+  },
+  "auth": {
+    "login": "Sign In",
+    "register": "Get Started",
+    "logout": "Sign Out",
+    "email": "Email",
+    "password": "Password",
+    "forgotPassword": "Forgot password?",
+    "noAccount": "Don't have an account?",
+    "hasAccount": "Already have an account?"
+  },
+  "places": {
+    "open": "Open",
+    "closed": "Closed",
+    "rating": "Rating",
+    "reviews": "reviews",
+    "distance": "km away",
+    "directions": "Get Directions",
+    "save": "Save Place",
+    "hiddenGem": "Hidden Gem",
+    "trending": "Trending"
+  },
+  "trips": {
+    "create": "Create Trip",
+    "plan": "Plan Trip",
+    "days": "days",
+    "budget": "Budget",
+    "public": "Public",
+    "completed": "Completed",
+    "draft": "Draft"
+  }
+}
