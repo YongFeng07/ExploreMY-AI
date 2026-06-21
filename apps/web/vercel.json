@@ -1,6 +1,5 @@
 {
-  "framework": "nextjs",
-  "buildCommand": "pnpm install --no-frozen-lockfile && pnpm turbo build --filter=@exploremy/web",
+  "buildCommand": "npx pnpm turbo build --filter=@exploremy/web",
   "outputDirectory": ".next",
-  "installCommand": "npm install -g pnpm@9 && pnpm install --no-frozen-lockfile"
+  "installCommand": "npx pnpm install --no-frozen-lockfile"
 }
