@@ -61,7 +61,6 @@
     "zustand": "^5.0.2"
   },
   "devDependencies": {
-    "@exploremy/config": "workspace:*",
     "@next/bundle-analyzer": "^15.1.0",
     "@playwright/test": "^1.49.1",
     "@tailwindcss/postcss": "^4.0.0",
