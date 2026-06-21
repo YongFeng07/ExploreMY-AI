@@ -1,5 +1,5 @@
 {
-  "buildCommand": "cd apps/web && npx next build",
+  "buildCommand": "cd ../.. && npx pnpm install && cd apps/web && npx next build",
   "outputDirectory": "apps/web/.next",
-  "installCommand": "npm install --legacy-peer-deps"
+  "installCommand": "npm install -g pnpm && pnpm install"
 }
