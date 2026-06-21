@@ -1,0 +1,5 @@
+{
+  "buildCommand": "npx pnpm install --no-frozen-lockfile && npx pnpm turbo build --filter=@exploremy/web",
+  "outputDirectory": "apps/web/.next",
+  "installCommand": ""
+}
