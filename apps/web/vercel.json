@@ -1,4 +1,0 @@
-{
-  "buildCommand": "npx next build",
-  "installCommand": "npm install"
-}
