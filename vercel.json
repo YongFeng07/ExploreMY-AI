@@ -1,7 +1,5 @@
 {
   "framework": "nextjs",
-  "rootDirectory": "apps/web",
-  "buildCommand": "npx pnpm install --no-frozen-lockfile --filter @exploremy/web && cd apps/web && npx next build",
-  "outputDirectory": "apps/web/.next",
-  "installCommand": "npm install -g pnpm && pnpm install --no-frozen-lockfile --filter @exploremy/web"
+  "buildCommand": "pnpm install --no-frozen-lockfile && cd apps/web && npx next build",
+  "installCommand": "npm install -g pnpm@9 && pnpm install --no-frozen-lockfile"
 }
