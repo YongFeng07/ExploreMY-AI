@@ -17,3 +17,5 @@ Thumbs.db
 apps/api/uploads/
 apps/api/exploremy-data*
 apps/api/test-*.json
+
+.vercel
