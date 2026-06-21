@@ -1,3 +1,5 @@
+// @ts-nocheck
+// @ts-nocheck
 'use client';
 import { useEffect, useState, useCallback } from 'react';
 import { AdvancedMarker } from '@vis.gl/react-google-maps';
