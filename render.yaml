@@ -3,7 +3,7 @@ services:
     name: exploremy-api
     env: node
     rootDir: apps/api
-    buildCommand: npm install && npx nest build
+    buildCommand: npm install --legacy-peer-deps && npx nest build
     startCommand: node dist/main
     envVars:
       - key: NODE_ENV
