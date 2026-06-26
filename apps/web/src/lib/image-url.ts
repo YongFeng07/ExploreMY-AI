@@ -2,7 +2,7 @@
  * Shared image URL resolver — converts relative upload paths to absolute URLs.
  * Previously copy-pasted into 11 files with inconsistent implementations.
  */
-const API = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001';
+const API = process.env.NEXT_PUBLIC_API_URL || '';
 
 export function imgUrl(path: string | null | undefined): string | undefined {
   if (!path) return undefined;

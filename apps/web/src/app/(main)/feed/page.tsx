@@ -4,7 +4,7 @@ import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { Heart, MapPin, Camera, BookOpen, Star, Sparkles, Compass } from 'lucide-react';
 
-const API = 'http://localhost:3001';
+const API = '';
 function imgUrl(url: string | null | undefined): string | null { if (!url) return null; if (url.startsWith('http')) return url; return `${API}${url.startsWith('/') ? '' : '/'}${url}`; }
 
 const typeIcon: Record<string, any> = { photo: Camera, journal: BookOpen, review: Star, trip: Sparkles, achievement: Star, wishlist: Compass };
@@ -17,13 +17,13 @@ export default function SocialFeedPage() {
 
   const load = () => {
     setLoading(true);
-    fetch(`${API}/api/v1/auth/social/feed`).then(r => r.json()).then(d => { setFeed(d.data || []); setLoading(false); }).catch(() => setLoading(false));
+    fetch(`${API}/api/auth/social/feed`).then(r => r.json()).then(d => { setFeed(d.data || []); setLoading(false); }).catch(() => setLoading(false));
   };
   useEffect(() => { load(); }, []);
 
   const toggleLike = async (id: string) => {
     if (!token) return;
-    const r = await fetch(`${API}/api/v1/auth/social/feed/${id}/like`, { method: 'POST', headers: { 'Authorization': `Bearer ${token}` } });
+    const r = await fetch(`${API}/api/auth/social/feed/${id}/like`, { method: 'POST', headers: { 'Authorization': `Bearer ${token}` } });
     const d = await r.json();
     if (d.data) setFeed(prev => prev.map(a => a.id === id ? { ...a, likes: [...a.likes, ...(d.data.liked ? ['user'] : [])] } : a));
   };

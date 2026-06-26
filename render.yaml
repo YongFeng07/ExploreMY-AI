@@ -3,20 +3,62 @@ services:
     name: exploremy-api
     env: node
     rootDir: apps/api
-    buildCommand: npm install --legacy-peer-deps && npx nest build
+    buildCommand: npm install --legacy-peer-deps --include=dev && npx prisma generate && npx nest build
     startCommand: node dist/main
     envVars:
+      # ── Node ──
       - key: NODE_ENV
         value: production
       - key: PORT
         value: 3001
+
+      # ── JWT ──
       - key: JWT_SECRET
         generateValue: true
+
+      # ── Database (auto-filled from exploremy-db) ──
+      - fromDatabase:
+          name: exploremy-db
+          property: connectionString
+      - key: DATABASE_URL
+        sync: false
+
+      # ── Clerk Auth ──
+      - key: CLERK_SECRET_KEY
+        sync: false
+      - key: CLERK_WEBHOOK_SECRET
+        sync: false
+
+      # ── Google Maps ──
       - key: GOOGLE_MAPS_API_KEY
         sync: false
+
+      # ── AI ──
       - key: DEEPSEEK_API_KEY
         sync: false
       - key: OPENAI_API_KEY
         sync: false
       - key: GEMINI_API_KEY
         sync: false
+
+      # ── Redis (optional — set manually if needed) ──
+      - key: REDIS_URL
+        sync: false
+
+      # ── Stripe ──
+      - key: STRIPE_SECRET_KEY
+        sync: false
+      - key: STRIPE_WEBHOOK_SECRET
+        sync: false
+
+      # ── Algolia ──
+      - key: ALGOLIA_ADMIN_API_KEY
+        sync: false
+
+      # ── Supabase ──
+      - key: SUPABASE_SERVICE_ROLE_KEY
+        sync: false
+
+databases:
+  - name: exploremy-db
+    plan: free

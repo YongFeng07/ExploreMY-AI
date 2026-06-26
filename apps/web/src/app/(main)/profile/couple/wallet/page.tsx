@@ -4,7 +4,7 @@ import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { Wallet, ChevronRight, PiggyBank, ArrowLeft, Heart, Sparkles, TrendingUp, Target, Trophy, Zap, CalendarDays, MapPin } from 'lucide-react';
 
-const API = 'http://localhost:3001';
+const API = '';
 
 export default function CoupleWalletPage() {
   const [goals, setGoals] = useState<any[]>([]);
@@ -15,8 +15,8 @@ export default function CoupleWalletPage() {
   const [loading, setLoading] = useState(true);
   const [contributing, setContributing] = useState(false);
   const [celebrate, setCelebrate] = useState(false);
-  const token = typeof window !== 'undefined' ? localStorage.getItem('accessToken') : '';
-  const userId = typeof window !== 'undefined' ? localStorage.getItem('userId') || 'demo' : 'demo';
+  const token = typeof window !== 'undefined' ? '' : '';
+  const userId = typeof window !== 'undefined' ? '' || 'demo' : 'demo';
   const authHeaders = () => ({ Authorization: `Bearer ${token}` });
 
   const load = async () => {

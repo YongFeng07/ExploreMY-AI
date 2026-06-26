@@ -22,46 +22,42 @@ export default function PhotosPage() {
   const fileRef = useRef<HTMLInputElement>(null);
   const [viewIdx, setViewIdx] = useState<number>(-1);
 
+  const STORAGE_KEY = 'profile_photos';
+
   const load = () => {
-    const uid = localStorage.getItem('userId') || '';
-    fetch(`${API}/api/v1/auth/me/photos?userId=${uid}`, { headers: getAuthHeaders() })
-      .then(r => r.json()).then(d => setPhotos(d.data || [])).catch(() => {});
+    try { setPhotos(JSON.parse(localStorage.getItem(STORAGE_KEY) || '[]')); } catch { setPhotos([]); }
   };
   useEffect(() => { load(); }, []);
 
   const upload = async (e?: React.ChangeEvent<HTMLInputElement>) => {
     const file = e?.target?.files?.[0] || fileRef.current?.files?.[0]; if (!file) return;
-    const uid = localStorage.getItem('userId') || '';
     setUploading(true); setUploadMsg('');
-    const fd = new FormData(); fd.append('file', file);
-    fd.append('caption', caption); fd.append('place', place); fd.append('userId', uid);
-    try {
-      const r = await fetch(`${API}/api/v1/auth/me/photos/upload?userId=${uid}`, {
-        method: 'POST', headers: getAuthHeaders(), body: fd,
-      });
-      const d = await r.json();
-      if (d.data) {
-        setUploadMsg('✅ Photo uploaded!');
-        setTimeout(() => setUploadMsg(''), 2000);
-        setCaption(''); setPlace('');
-        if (fileRef.current) fileRef.current.value = '';
-        load();
-      } else {
-        setUploadMsg('❌ ' + (d.error || d.message || 'Upload failed. Try logging in again.'));
-      }
-    } catch { setUploadMsg('❌ Network error - check your connection'); }
-    setUploading(false);
+    const reader = new FileReader();
+    reader.onload = () => {
+      const newPhoto = { id: 'p_' + Date.now(), url: reader.result as string, caption: caption || '', place: place || '', date: new Date().toISOString() };
+      const updated = [newPhoto, ...photos];
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(updated));
+      setPhotos(updated);
+      setUploadMsg('Photo saved!');
+      setTimeout(() => setUploadMsg(''), 2000);
+      setCaption(''); setPlace('');
+      if (fileRef.current) fileRef.current.value = '';
+      setUploading(false);
+    };
+    reader.readAsDataURL(file);
   };
 
-  const deletePhoto = async (id: string) => {
-    await fetch(`${API}/api/v1/auth/me/photos/${id}`, { method: 'DELETE', headers: getAuthHeaders() });
-    setViewIdx(-1); load();
+  const deletePhoto = (id: string) => {
+    const updated = photos.filter(p => p.id !== id);
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(updated));
+    setPhotos(updated);
+    setViewIdx(-1);
   };
 
   /* ── Full-screen Photo Viewer ── */
   if (viewIdx >= 0 && photos[viewIdx]) {
     const p = photos[viewIdx];
-    const displayUrl = imgUrl(p.url);
+    const displayUrl = p.url;
     return (
       <div className="fixed inset-0 z-[9999] bg-black flex flex-col">
         <div className="flex items-center justify-between px-4 py-3 safe-top">
@@ -126,7 +122,7 @@ export default function PhotosPage() {
           <div className="grid grid-cols-3 gap-1.5">
             {photos.map((p: any, i: number) => (
               <div key={p.id} className="relative group cursor-pointer aspect-square overflow-hidden rounded-xl bg-[#F5EDE3]">
-                <img src={imgUrl(p.url)!} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300" alt=""
+                <img src={p.url!} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300" alt=""
                   onClick={() => setViewIdx(i)}
                   onError={e => { (e.target as HTMLImageElement).style.display = 'none'; }} />
                 {p.place && (

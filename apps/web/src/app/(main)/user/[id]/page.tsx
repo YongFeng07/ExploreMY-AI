@@ -6,7 +6,7 @@ import { useParams, useRouter } from 'next/navigation';
 import { motion } from 'framer-motion';
 import { ArrowLeft, MapPin, Camera, BookOpen, Star, Clock, Heart, UserPlus, UserCheck, Navigation, ChevronRight, Award, Grid3X3, List } from 'lucide-react';
 
-const API = 'http://localhost:3001';
+const API = '';
 function imgUrl(url: string | null | undefined): string | null { if (!url) return null; if (url.startsWith('http')) return url; return `${API}${url.startsWith('/') ? '' : '/'}${url}`; }
 
 export default function UserProfilePage() {
@@ -24,9 +24,9 @@ export default function UserProfilePage() {
     if (!id) return;
     const h = token ? { Authorization: `Bearer ${token}` } : {};
     Promise.all([
-      fetch(`${API}/api/v1/auth/user/${id}/profile`, { headers: h }).then(r => r.json()).catch(() => ({ data: null })),
-      fetch(`${API}/api/v1/auth/user/${id}/followers`, { headers: h }).then(r => r.json()).catch(() => ({ data: [] })),
-      fetch(`${API}/api/v1/auth/user/${id}/following`, { headers: h }).then(r => r.json()).catch(() => ({ data: [] })),
+      fetch(`${API}/api/auth/user/${id}/profile`, { headers: h }).then(r => r.json()).catch(() => ({ data: null })),
+      fetch(`${API}/api/auth/user/${id}/followers`, { headers: h }).then(r => r.json()).catch(() => ({ data: [] })),
+      fetch(`${API}/api/auth/user/${id}/following`, { headers: h }).then(r => r.json()).catch(() => ({ data: [] })),
     ]).then(([p, followers, following]) => {
       const data = p.data || {};
       setProfile({ ...data, followersList: followers.data || [], followingList: following.data || [] });
@@ -37,7 +37,7 @@ export default function UserProfilePage() {
 
   const toggleFollow = async () => {
     if (!token || !id) return;
-    await fetch(`${API}/api/v1/auth/follow/${id}`, { method: isFollowing ? 'DELETE' : 'POST', headers: { Authorization: `Bearer ${token}` } });
+    await fetch(`${API}/api/auth/follow/${id}`, { method: isFollowing ? 'DELETE' : 'POST', headers: { Authorization: `Bearer ${token}` } });
     setIsFollowing(!isFollowing);
     setProfile((prev: any) => ({
       ...prev, followers: (prev?.followers || 0) + (isFollowing ? -1 : 1),

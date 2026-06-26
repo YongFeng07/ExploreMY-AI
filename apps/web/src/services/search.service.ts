@@ -1,4 +1,4 @@
-const API = 'http://localhost:3001/api/v1';
+const API = '/api/v1';
 export const searchService = {
   async search(query: string, lat?: number, lng?: number) {
     const params = new URLSearchParams({ q: query });

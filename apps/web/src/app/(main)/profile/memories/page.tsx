@@ -4,7 +4,7 @@ import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { MapPin, Camera, BookOpen, Navigation, X } from 'lucide-react';
 
-const API = 'http://localhost:3001';
+const API = '';
 function imgUrl(url: string | null | undefined): string | null {
   if (!url) return null;
   if (url.startsWith('http')) return url;
@@ -17,8 +17,8 @@ export default function MemoriesPage() {
   const [trips, setTrips] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [viewPhoto, setViewPhoto] = useState<string | null>(null);
-  const token = typeof window !== 'undefined' ? localStorage.getItem('accessToken') : '';
-  const uid = typeof window !== 'undefined' ? localStorage.getItem('userId') || '' : '';
+  const token = typeof window !== 'undefined' ? '' : '';
+  const uid = typeof window !== 'undefined' ? '' || '' : '';
 
   useEffect(() => {
     const h: any = {};

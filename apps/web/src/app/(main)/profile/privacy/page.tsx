@@ -7,17 +7,17 @@ import { Shield, Eye, Lock, Globe, Heart, Map, Camera, BookOpen, Search } from '
 export default function PrivacyCenter() {
   const [settings, setSettings] = useState<any>(null);
   const [saving, setSaving] = useState('');
-  const token = typeof window !== 'undefined' ? localStorage.getItem('accessToken') : '';
+  const token = typeof window !== 'undefined' ? '' : '';
 
   useEffect(() => {
-    fetch('http://localhost:3001/api/v1/auth/me/privacy', { headers: { 'Authorization': `Bearer ${token}` } })
+    fetch('/api/auth/me/privacy', { headers: { 'Authorization': `Bearer ${token}` } })
       .then(r => r.json()).then(d => setSettings(d.data || {})).catch(() => {});
   }, []);
 
   const save = async (key: string, value: any) => {
     setSaving(key);
     setSettings((prev: any) => ({ ...prev, [key]: value }));
-    await fetch('http://localhost:3001/api/v1/auth/me/privacy', {
+    await fetch('/api/auth/me/privacy', {
       method: 'PATCH', headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
       body: JSON.stringify({ [key]: value }),
     });
@@ -95,7 +95,7 @@ export default function PrivacyCenter() {
         <div className="bg-white rounded-2xl shadow-sm border border-[#E8D5C4]/50 p-5">
           <p className="text-[11px] font-bold text-[#8B7355] uppercase tracking-wider mb-3"><Shield className="h-3.5 w-3.5 inline mr-1" />Data & Account</p>
           <button onClick={async () => {
-            const r = await fetch('http://localhost:3001/api/v1/auth/me', { headers: { 'Authorization': `Bearer ${token}` } });
+            const r = await fetch('/api/auth/me', { headers: { 'Authorization': `Bearer ${token}` } });
             const d = await r.json();
             const blob = new Blob([JSON.stringify(d.data, null, 2)], { type: 'application/json' });
             const url = URL.createObjectURL(blob);
@@ -106,7 +106,7 @@ export default function PrivacyCenter() {
           </button>
           <button onClick={async () => {
             if (confirm('⚠️ This will permanently delete your account. Continue?')) {
-              await fetch('http://localhost:3001/api/v1/auth/me', { method: 'DELETE', headers: { 'Authorization': `Bearer ${token}` } });
+              await fetch('/api/auth/me', { method: 'DELETE', headers: { 'Authorization': `Bearer ${token}` } });
               localStorage.clear(); window.location.href = '/';
             }
           }} className="w-full text-left p-3 rounded-xl bg-red-50 hover:bg-red-100 transition-colors flex items-center gap-3 mt-2">

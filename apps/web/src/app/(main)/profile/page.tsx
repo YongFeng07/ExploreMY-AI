@@ -1,10 +1,10 @@
 // @ts-nocheck
 'use client';
 
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { motion } from 'framer-motion';
-import { useAuth } from '@/stores/auth-store';
+import { useUser, useAuth } from '@clerk/nextjs';
 import {
   Camera, Settings, MapPin, Compass, Heart, BookOpen,
   Wallet, Sparkles, LogIn, UserPlus, ChevronRight,
@@ -13,72 +13,44 @@ import {
 } from 'lucide-react';
 import { DarkModeToggle } from '@/components/shared/dark-mode-toggle';
 
-const API = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001';
-
-/** Convert relative upload paths to absolute URLs */
-function imgUrl(url: string | null | undefined): string | null {
-  if (!url) return null;
-  if (url.startsWith('http://') || url.startsWith('https://')) return url;
-  return `${API}${url.startsWith('/') ? '' : '/'}${url}`;
-}
-
 export default function ProfilePage() {
-  const { user, isAuthenticated, logout } = useAuth();
-  const [data, setData] = useState<any>(null);
-  const [walletData, setWalletData] = useState<any>(null);
-  const [achievements, setAchievements] = useState<any>(null);
-  const [followers, setFollowers] = useState<any[]>([]);
-  const [following, setFollowing] = useState<any[]>([]);
-  const [showFollowSheet, setShowFollowSheet] = useState<{ title: string; list: any[] } | null>(null);
+  const { isSignedIn, isLoaded, signOut } = useAuth();
+  const { user: clerkUser } = useUser();
   const [viewImage, setViewImage] = useState<string | null>(null);
-  const [loading, setLoading] = useState(true);
+  const [coverUrl, setCoverUrl] = useState('');
   const [mounted, setMounted] = useState(false);
+  const isAuthenticated = isSignedIn ?? false;
+  const loading = !isLoaded;
+  const isAdmin = clerkUser?.primaryEmailAddress?.emailAddress === 'yongfeng3318@gmail.com';
 
   useEffect(() => { setMounted(true); }, []);
+  useEffect(() => { setCoverUrl(localStorage.getItem('profile_cover') || ''); }, []);
 
-  const loadProfile = useCallback(async () => {
-    const token = localStorage.getItem('accessToken');
-    const uid = user?.id || localStorage.getItem('userId') || '';
-    const headers: any = {};
-    if (token) headers['Authorization'] = `Bearer ${token}`;
-    try {
-      const [profileRes, walletRes, achieveRes, followersRes, followingRes] = await Promise.all([
-        fetch(`${API}/api/v1/auth/me?userId=${uid}`, { headers }).then(r => r.json()),
-        fetch(`${API}/api/v1/travel-wallet/goals/user/${uid}`, { headers }).then(r => r.json()).catch(() => ({ data: [] })),
-        fetch(`${API}/api/v1/achievements?userId=${uid}`, { headers }).then(r => r.json()).catch(() => ({ data: null })),
-        fetch(`${API}/api/v1/auth/user/${uid}/followers`, { headers }).then(r => r.json()).catch(() => ({ data: [] })),
-        fetch(`${API}/api/v1/auth/user/${uid}/following`, { headers }).then(r => r.json()).catch(() => ({ data: [] })),
-      ]);
-      setData(profileRes.data || profileRes);
-      setWalletData(walletRes.data || []);
-      setAchievements(achieveRes.data);
-      setFollowers(followersRes.data || []);
-      setFollowing(followingRes.data || []);
-    } catch { /* ok */ }
-    setLoading(false);
-  }, [isAuthenticated, user?.id]);
-
-  // Reload profile data whenever the component mounts (e.g., returning from edit page)
-  useEffect(() => { loadProfile(); }, [loadProfile]);
-  // Also reload when the page becomes visible (e.g., navigating back from another tab)
-  useEffect(() => {
-    const onFocus = () => loadProfile();
-    window.addEventListener('focus', onFocus);
-    document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'visible') loadProfile(); });
-    return () => { window.removeEventListener('focus', onFocus); };
-  }, [loadProfile]);
-
-  const uploadFile = async (file: File, type: 'avatar' | 'cover') => {
-    const token = localStorage.getItem('accessToken');
-    const uid = localStorage.getItem('userId') || user?.id || '';
-    if (!file) return;
-    const fd = new FormData(); fd.append('file', file); fd.append('userId', uid || user?.id || '');
-    const headers: any = {};
-    if (token) headers['Authorization'] = `Bearer ${token}`;
-    const r = await fetch(`${API}/api/v1/auth/me/${type}?userId=${uid}`, { method: 'POST', headers, body: fd });
-    if (!r.ok) alert(`Failed to upload ${type}. Please try again.`);
-    else loadProfile();
+  const uploadAvatar = async (file: File) => {
+    try { await clerkUser?.setProfileImage({ file }); } catch { alert('Upload failed'); }
   };
+  const uploadCover = (file: File) => {
+    const r = new FileReader();
+    r.onload = () => { const u = r.result as string; localStorage.setItem('profile_cover', u); setCoverUrl(u); };
+    r.readAsDataURL(file);
+  };
+
+  const user = clerkUser ? {
+    id: clerkUser.id, email: clerkUser.primaryEmailAddress?.emailAddress || '',
+    displayName: clerkUser.fullName || clerkUser.username || 'Explorer',
+    avatarUrl: clerkUser.imageUrl || '', coverUrl: coverUrl,
+    bio: '', location: '', level: 1, xp: 0,
+    memberSince: clerkUser.createdAt,
+    isVerified: clerkUser.primaryEmailAddress?.verification?.status === 'verified',
+    stats: {}, visitedCities: [], dna: [], badges: [],
+  } : null;
+  const data = user;
+  const walletGoals = (() => { try { return JSON.parse(localStorage.getItem('wallet_goals') || '[]'); } catch { return []; } })();
+  const walletData = walletGoals.map((g: any) => ({ currentAmount: g.currentSavings || 0, targetAmount: g.targetAmount || 0 }));
+  const followers: any[] = []; const following: any[] = [];
+  const showFollowSheet = null; const setShowFollowSheet = () => {};
+  const achievements = null;
+  const logout = () => signOut();
 
   /* ── Unauthenticated ── */
   if (mounted && !isAuthenticated) {
@@ -143,13 +115,13 @@ export default function ProfilePage() {
       {/* ═══════════════════════════════════════════════════════════════
           COVER PHOTO — Airbnb style
           ═══════════════════════════════════════════════════════════════ */}
-      <div className="relative h-64 overflow-hidden bg-gradient-to-br from-[#234530] via-[#315B43] to-[#5E876A] cursor-pointer group" onClick={() => { if (imgUrl(data?.coverUrl)) setViewImage(imgUrl(data?.coverUrl)); }}>
-        {imgUrl(data?.coverUrl) ? (
-          <img src={imgUrl(data?.coverUrl)!} className="absolute inset-0 w-full h-full object-cover group-hover:scale-105 transition-transform duration-700" alt="" />
+      <div className="relative h-64 overflow-hidden bg-gradient-to-br from-[#234530] via-[#315B43] to-[#5E876A] cursor-pointer group" onClick={() => { if (user?.coverUrl || '') setViewImage(user?.coverUrl || ''); }}>
+        {user?.coverUrl || '' ? (
+          <img src={user?.coverUrl || ''!} className="absolute inset-0 w-full h-full object-cover group-hover:scale-105 transition-transform duration-700" alt="" />
         ) : null}
         {/* Gradient overlay */}
         <div className="absolute inset-0 bg-gradient-to-t from-black/50 via-black/10 to-transparent" />
-        {imgUrl(data?.coverUrl) && <div className="absolute inset-0 bg-black/0 group-hover:bg-black/10 transition-colors flex items-center justify-center"><span className="text-white text-[13px] font-bold opacity-0 group-hover:opacity-100 transition-opacity bg-black/40 rounded-full px-4 py-2">🔍 View Cover</span></div>}
+        {user?.coverUrl || '' && <div className="absolute inset-0 bg-black/0 group-hover:bg-black/10 transition-colors flex items-center justify-center"><span className="text-white text-[13px] font-bold opacity-0 group-hover:opacity-100 transition-opacity bg-black/40 rounded-full px-4 py-2">🔍 View Cover</span></div>}
 
         {/* Top actions — frosted glass */}
         <div className="absolute top-4 right-4 flex gap-2">
@@ -168,7 +140,7 @@ export default function ProfilePage() {
         {/* Change cover button */}
         <label className="absolute bottom-4 right-4 w-9 h-9 rounded-full bg-white/25 backdrop-blur-md flex items-center justify-center text-white cursor-pointer hover:bg-white/35 transition-all">
           <Camera className="h-4 w-4" />
-          <input type="file" accept="image/*" className="hidden" onChange={e => { const f = e.target.files?.[0]; if (f) uploadFile(f, 'cover'); }} />
+          <input type="file" accept="image/*" className="hidden" onChange={e => { const f = e.target.files?.[0]; if (f) uploadCover(f); }} />
         </label>
       </div>
 
@@ -181,14 +153,14 @@ export default function ProfilePage() {
           <div className="relative flex-shrink-0">
             <label className="relative cursor-pointer group block">
               <div className="w-[96px] h-[96px] rounded-full bg-[#315B43] flex items-center justify-center text-white text-[36px] font-bold ring-[4px] ring-[#F7F9F5] shadow-lg overflow-hidden">
-                {imgUrl(data?.avatarUrl) ? (
-                  <img src={imgUrl(data?.avatarUrl)!} className="w-full h-full object-cover cursor-pointer" alt="" onClick={(e) => { e.stopPropagation(); setViewImage(imgUrl(data?.avatarUrl)); }} />
+                {user?.avatarUrl || '' ? (
+                  <img src={user?.avatarUrl || ''!} className="w-full h-full object-cover cursor-pointer" alt="" onClick={(e) => { e.stopPropagation(); setViewImage(user?.avatarUrl || ''); }} />
                 ) : avatarChar}
               </div>
               <div className="absolute inset-0 rounded-full bg-black/0 group-hover:bg-black/15 flex items-center justify-center transition-all">
                 <Camera className="h-6 w-6 text-white opacity-0 group-hover:opacity-100 transition-opacity" />
               </div>
-              <input type="file" accept="image/*" className="hidden" onChange={e => { const f = e.target.files?.[0]; if (f) uploadFile(f, 'avatar'); }} />
+              <input type="file" accept="image/*" className="hidden" onChange={e => { const f = e.target.files?.[0]; if (f) uploadAvatar(f); }} />
             </label>
             {/* Level badge — Google Maps Local Guide style */}
             <div className="absolute -bottom-1.5 -right-1.5 w-[30px] h-[30px] rounded-full bg-[#D4A95F] text-white text-[11px] font-extrabold flex items-center justify-center ring-[3px] ring-[#F7F9F5] shadow-md">

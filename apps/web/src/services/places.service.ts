@@ -1,4 +1,4 @@
-const API = 'http://localhost:3001/api/v1';
+const API = '/api/v1';
 export const placesService = {
   async nearby(lat: number, lng: number, radius = 5000, category?: string) {
     const params = new URLSearchParams({ lat: String(lat), lng: String(lng), radius: String(radius) });

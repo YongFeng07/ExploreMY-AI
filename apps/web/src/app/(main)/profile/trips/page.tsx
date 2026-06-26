@@ -6,17 +6,11 @@ import { useRouter } from 'next/navigation';
 import { MapPin, Calendar, Trash2, Sparkles, ArrowLeft, X, Navigation, CheckCircle, Circle, ChevronLeft, ChevronRight, Star, Clock } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
-const API = 'http://localhost:3001';
-
-function imgUrl(url: string | null | undefined): string | null {
-  if (!url) return null;
-  if (url.startsWith('http')) return url;
-  return `${API}${url.startsWith('/') ? '' : '/'}${url}`;
-}
-
 export default function MyTripsPage() {
   const router = useRouter();
-  const [trips, setTrips] = useState<any[]>([]);
+  const [trips, setTrips] = useState<any[]>(() => {
+    try { return JSON.parse(localStorage.getItem('saved_trips') || '[]'); } catch { return []; }
+  });
   const [sel, setSel] = useState<any>(null);
   const [selStop, setSelStop] = useState<any>(null);
   const [photoIdx, setPhotoIdx] = useState(0);
@@ -25,29 +19,24 @@ export default function MyTripsPage() {
   const [tab, setTab] = useState<'active' | 'completed'>('active');
   const [detailTab, setDetailTab] = useState<string>('timeline');
   const [dayIdx, setDayIdx] = useState(0);
-  const token = typeof window !== 'undefined' ? localStorage.getItem('accessToken') : '';
-  const uid = typeof window !== 'undefined' ? localStorage.getItem('userId') || '' : '';
+
+  const saveTrips = (t: any[]) => { localStorage.setItem('saved_trips', JSON.stringify(t)); setTrips(t); };
 
   const load = () => {
-    const headers: any = {};
-    if (token) headers['Authorization'] = `Bearer ${token}`;
-    fetch(`${API}/api/v1/auth/me/trips?userId=${uid}`, { headers })
-      .then(r => r.json()).then(d => setTrips(d.data || [])).catch(() => {});
+    try { setTrips(JSON.parse(localStorage.getItem('saved_trips') || '[]')); } catch { setTrips([]); }
   };
   useEffect(() => { load(); }, []);
 
-  const toggleCompleted = async (id: string, completed: boolean) => {
-    await fetch(`${API}/api/v1/auth/me/trips/${id}/complete?userId=${uid}`, {
-      method: 'PATCH', headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
-      body: JSON.stringify({ completed, userId: uid }),
-    });
-    load();
-    if (sel?.id === id) setSel((p: any) => ({ ...p, completed, completedAt: completed ? new Date().toISOString() : null }));
+  const toggleCompleted = (id: string, completed: boolean) => {
+    const updated = trips.map(t => t.id === id || t.savedAt === id ? { ...t, completed, completedAt: completed ? new Date().toISOString() : null } : t);
+    saveTrips(updated);
+    if (sel?.id === id || sel?.savedAt === id) setSel((p: any) => ({ ...p, completed, completedAt: completed ? new Date().toISOString() : null }));
   };
 
-  const remove = async (id: string) => {
-    await fetch(`${API}/api/v1/auth/me/trips/${id}`, { method: 'DELETE', headers: { Authorization: `Bearer ${token}` } });
-    setSel(null); load();
+  const remove = (id: string) => {
+    const updated = trips.filter(t => t.id !== id && t.savedAt !== id);
+    saveTrips(updated);
+    setSel(null);
   };
 
   const activeTrips = trips.filter((t: any) => !t.completed);

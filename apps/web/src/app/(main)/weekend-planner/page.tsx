@@ -1084,7 +1084,7 @@ export default function Page() {
     const dlat = destLat || (plan?.destinationLat || 5.4141);
     const dlng = destLng || (plan?.destinationLng || 100.3288);
     const vehicleMap: Record<string,string> = {FASTEST:'car_midsize',CHEAPEST:'car_compact',SCENIC:'car_midsize',FOODIE:'car_midsize',FAMILY:'car_mpv',COUPLE:'car_compact'};
-    fetch('http://localhost:3001/api/v1/weekend-planner/roadtrip/calculate', {
+    fetch('/api/weekend-planner/roadtrip/calculate', {
       method:'POST', headers:{'Content-Type':'application/json'},
       body:JSON.stringify({originLat:olat,originLng:olng,destLat:dlat,destLng:dlng,vehicleType:vehicleMap[routeStrategy]||'car_midsize',dayCount:Math.max(1,Math.ceil((new Date(eD).getTime()-new Date(sD).getTime())/86400000)+1),pax:size,style:routeStrategy}),
     }).then(r=>r.json()).then(d=>setRoadtripData(d.data)).catch(()=>{});
@@ -1109,7 +1109,7 @@ export default function Page() {
           batch.map(async (place) => {
             const cacheKey = place.name;
             try {
-              const r = await fetch(`http://localhost:3001/api/v1/places/search?q=${encodeURIComponent(place.name)}&lat=${place.lat}&lng=${place.lng}&limit=1`);
+              const r = await fetch(`/api/places/search?q=${encodeURIComponent(place.name)}&lat=${place.lat}&lng=${place.lng}&limit=1`);
               const d = await r.json();
               const photos: string[] = d.data?.[0]?.photos || [];
               // Filter out obviously broken/fake Unsplash URLs, keep only real Google photos
@@ -1159,14 +1159,14 @@ export default function Page() {
     const fetchHotelPhotos = async () => {
       try {
         const q = encodeURIComponent(hd.name + ' ' + (hd.address || plan?.destination || '') + ' hotel');
-        const sr = await fetch(`http://localhost:3001/api/v1/places/search?q=${q}&lat=${hd.lat || plan?.destinationLat || 3.139}&lng=${hd.lng || plan?.destinationLng || 101.6869}&limit=5`);
+        const sr = await fetch(`/api/places/search?q=${q}&lat=${hd.lat || plan?.destinationLat || 3.139}&lng=${hd.lng || plan?.destinationLng || 101.6869}&limit=5`);
         const sd = await sr.json();
         let best: string[] = [];
         for (const place of (sd.data || [])) {
           const pid = place.id || place.place_id;
           if (pid && !pid.startsWith('fb') && !pid.startsWith('citydb')) {
             try {
-              const dr = await fetch(`http://localhost:3001/api/v1/places/details/${pid}`);
+              const dr = await fetch(`/api/places/details/${pid}`);
               const dd = await dr.json();
               if (dd.data?.photos?.length > best.length) best = dd.data.photos;
               if (best.length >= 10) break;
@@ -1220,19 +1220,24 @@ export default function Page() {
   const generate = async () => {
     if (!dest) return; setLoading(true); setError(''); setPlan(null);
     const fb = custB ? parseInt(custB) : budget;
+    // Budget validation: min RM250/person/day, recommend RM400-800/person/day
+    const diffDays = Math.ceil((new Date(eD).getTime() - new Date(sD).getTime()) / 86400000) + 1;
+    const minBudget = diffDays * size * 150;
+    const maxBudget = diffDays * size * 8000;
+    if (fb < minBudget) { setError(`Minimum budget RM ${minBudget.toLocaleString()} for ${size}p × ${diffDays} days. Increase budget or reduce days/people.`); setLoading(false); return; }
+    if (fb > maxBudget) { setError(`Maximum budget is RM ${maxBudget.toLocaleString()}.`); setLoading(false); return; }
     const controller = new AbortController();
-    const timeout = setTimeout(() => controller.abort(), 35000); // 35s max
+    const timeout = setTimeout(() => controller.abort(), 90000);
     try {
-      const res = await fetch('http://localhost:3001/api/v1/weekend-planner/generate', {
+      const res = await fetch('/api/weekend-planner/generate', {
         method: 'POST', headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ destination: dest, destinationLat: destLat, destinationLng: destLng, originLat, originLng, tripDistance, startDate: sD, endDate: eD, planType: 'TWO_DAY', budget: fb, budgetCurrency: 'MYR', transportMode: aiTransport?.mode || 'DRIVING', groupType: group, travelStyles: styles, specialPreferences: prefs, groupSize: size, userId: localStorage.getItem('userId') || '' }),
+        body: JSON.stringify({ destination: dest, destinationLat: destLat, destinationLng: destLng, originLat, originLng, tripDistance, startDate: sD, endDate: eD, budget: fb, transportMode: aiTransport?.mode || 'DRIVING', groupType: group, travelStyles: styles, specialPreferences: prefs, groupSize: size }),
         signal: controller.signal,
       });
       const data = await res.json();
       if (data.error) setError(data.error); else setPlan(data.data || data);
     } catch (e: any) {
-      if (e.name === 'AbortError') setError('Request timed out. Try a simpler trip or check your internet connection.');
-      else setError(e.message || 'Network error');
+      setError('Unable to generate. Please try again.');
     }
     clearTimeout(timeout);
     setLoading(false);
@@ -1256,7 +1261,7 @@ export default function Page() {
           <div className="flex gap-3">
             <div className="flex-1">
               <p className="text-[11px] font-bold text-[#8B7355] mb-1">📅 Start</p>
-              <input type="date" value={sD} onChange={e => {setSD(e.target.value); if(e.target.value>eD) setED(e.target.value)}}
+              <input type="date" value={sD} min={new Date().toISOString().split('T')[0]} onChange={e => {setSD(e.target.value); if(e.target.value>eD) setED(e.target.value)}}
                 className="w-full rounded-xl border-2 border-[#D4C4B0] bg-white py-3.5 px-4 text-[15px] font-semibold text-[#0E0E0E] cursor-pointer" style={{colorScheme:'light'}} />
             </div>
             <div className="flex-1">
@@ -1376,7 +1381,7 @@ export default function Page() {
       </div>
 
       <div className="fixed bottom-20 left-0 right-0 px-5 pb-6 pt-4 z-40" style={{ background: 'linear-gradient(to top, #FAFAF8 60%, transparent)' }}>
-        {error && <p className="text-[#D64045] text-xs mb-2 text-center">{error}</p>}
+        {error && <p className="text-[#D64045] text-xs mb-2 text-center">{error} <span className="text-[#8B7355]">— tap Generate again to retry</span></p>}
         <button onClick={generate} disabled={!dest} className="btn-primary w-full text-lg py-4"><Sparkles className="h-5 w-5" /> Generate My Weekend</button>
       </div>
     </div>
@@ -1472,7 +1477,7 @@ export default function Page() {
       {/* Tabs */}
       <div className="sticky top-0 z-30 bg-[#FAFAF8]/90 backdrop-blur-xl border-b border-[#E5E7EB]">
         <div className="flex px-5 py-2.5 gap-1">
-          {[{ k: 'timeline', l: 'Timeline' }, { k: 'budget', l: 'Budget' }, { k: 'roadtrip', l: '🚗 Roadtrip' }].map(t => (
+          {[{ k: 'timeline', l: 'Timeline' }, { k: 'budget', l: 'Budget' }, { k: 'roadtrip', l: '🚗 Roadtrip' }, { k: 'tips', l: '🍜 Tips' }].map(t => (
             <button key={t.k} onClick={() => setTab(t.k)} className={cn('tab-travel', tab === t.k && 'tab-travel-active')}>{t.l}</button>
           ))}
         </div>
@@ -1496,7 +1501,7 @@ export default function Page() {
                 {day.stops?.map((s: any, idx: number) => (
                   <div key={idx} className="cursor-pointer enter" style={{ animationDelay: `${idx * 0.06}s` }} onClick={() => { setSelStop(s); setPhotoIdx(0); setNearbyPlaces([]);
                     const nLat = s.lat || destLat || 3.139; const nLng = s.lng || destLng || 101.6869;
-                    fetch(`http://localhost:3001/api/v1/places/nearby?lat=${nLat}&lng=${nLng}&radius=3000&limit=5`)
+                    fetch(`/api/places/nearby?lat=${nLat}&lng=${nLng}&radius=3000&limit=5`)
                       .then(r => r.json()).then(d => setNearbyPlaces((d.data||[]).filter((p:any) => p.name !== s.placeName).slice(0,3))).catch(()=>{});
                   }}>
                     <div className="flex gap-0">
@@ -1505,13 +1510,14 @@ export default function Page() {
                         {idx < (day.stops?.length ?? 0) - 1 && <div className="timeline-line flex-1 mt-1.5 mb-1.5" />}
                       </div>
                       <div className="flex-1 hero-card mb-5 bg-white border border-[#E5E7EB]">
-                        {s.photoUrl ? <img src={s.photoUrl} className="w-full h-44 object-cover" alt="" /> : <div className="w-full h-28 bg-[#FDF6ED] flex items-center justify-center text-4xl">{s.emoji ?? '📍'}</div>}
+                        {s.photoUrl ? <img src={s.photoUrl} className="w-full h-44 object-cover cursor-pointer hover:scale-105 transition-transform" alt="" onClick={(e: any) => { e.stopPropagation(); setViewImages([s.photoUrl]); }} /> : <div className="w-full h-28 bg-[#FDF6ED] flex items-center justify-center text-4xl">{s.emoji ?? '📍'}</div>}
                         <div className="p-4">
                           <div className="flex items-center justify-between mb-1">
                             <span className="text-[14px] font-bold text-[#1A1A1A]">{s.placeName}</span>
                             <div className="flex gap-1">{s.isHiddenGem && <span className="text-[9px] font-bold bg-purple-100 text-purple-600 rounded-full px-2 py-0.5">💎 Gem</span>}{s.isPhotoSpot && <span className="text-[9px] font-bold bg-sky-100 text-sky-600 rounded-full px-2 py-0.5">📸</span>}</div>
                           </div>
-                          <p className="text-[13px] text-[#6B7280] leading-relaxed line-clamp-2 mb-3">{s.description}</p>
+                          <p className="text-[13px] text-[#6B7280] leading-relaxed mb-2">{s.description}</p>
+                          {s.mustTry && <p className="text-[12px] text-[#C4956A] bg-[#FDF6ED] rounded-lg px-2.5 py-1.5 mb-2 font-medium flex items-center gap-1"><span>⭐</span> Must try: {s.mustTry}</p>}
                           <div className="flex items-center gap-4 text-[12px] text-[#9CA3AF] font-medium">
                             <span className="flex items-center gap-1"><Clock className="h-3 w-3 text-[#7B5E3B]" /> {s.time}</span>
                             {s.rating > 0 && <span className="flex items-center gap-0.5 text-[#1A1A1A]"><Star className="h-3 w-3 fill-amber-400 text-amber-400" /> {s.rating}</span>}
@@ -1638,7 +1644,7 @@ export default function Page() {
                       setHotelDetail(null);
                       try {
                         const q = encodeURIComponent(h.name+' '+plan.destination);
-                        const r = await fetch(`http://localhost:3001/api/v1/places/search?q=${q}&lat=${plan.destinationLat||5.41}&lng=${plan.destinationLng||100.33}`);
+                        const r = await fetch(`/api/places/search?q=${q}&lat=${plan.destinationLat||5.41}&lng=${plan.destinationLng||100.33}`);
                         const d = await r.json();
                         const match = (d.data||[]).find((p:any) => p.name?.toLowerCase().includes(h.name.toLowerCase().split(' ')[0] || ''));
                         setHotelDetail(match || h);
@@ -1785,6 +1791,89 @@ export default function Page() {
           </div>
           );
         })()}
+        {/* 🍜 TIPS TAB — Local Cuisine + AI Tips + Photo Spots */}
+        {tab === 'tips' && (
+          <div className="px-5 pt-4 pb-8 space-y-4">
+            {plan.localCuisine?.length > 0 && (
+              <div className="bg-white rounded-2xl p-5 border border-amber-100 shadow-sm">
+                <p className="text-[10px] font-bold text-amber-500 uppercase tracking-wider mb-3">🍜 Must-Try Local Cuisine</p>
+                <div className="space-y-2">
+                  {plan.localCuisine.map((c: any, i: number) => (
+                    <div key={i} className="flex items-start gap-3 p-3 bg-amber-50/50 rounded-xl">
+                      <span className="text-2xl">{c.mustTry ? '⭐' : '🍽️'}</span>
+                      <div className="flex-1">
+                        <div className="flex items-center justify-between">
+                          <p className="text-[13px] font-extrabold text-[#0E0E0E]">{c.name}</p>
+                          <span className="text-[11px] font-bold text-[#7B5E3B]">RM {c.avgPrice}</span>
+                        </div>
+                        <p className="text-[11px] text-[#6B7280] mt-0.5">{c.description}</p>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+            {plan.aiTips?.length > 0 && (
+              <div className="bg-white rounded-2xl p-5 border border-emerald-100 shadow-sm">
+                <p className="text-[10px] font-bold text-emerald-500 uppercase tracking-wider mb-3">💡 AI Travel Tips</p>
+                <div className="space-y-2">
+                  {plan.aiTips.map((t: string, i: number) => (
+                    <div key={i} className="flex items-start gap-2 p-2.5 bg-emerald-50/50 rounded-xl">
+                      <span className="w-5 h-5 rounded-full bg-emerald-100 flex items-center justify-center text-[10px] font-bold text-emerald-600 flex-shrink-0 mt-0.5">{i + 1}</span>
+                      <p className="text-[12px] text-[#5C4A3A] leading-relaxed">{t}</p>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+            {plan.bestPhotoSpots?.length > 0 && (
+              <div className="bg-white rounded-2xl p-5 border border-sky-100 shadow-sm">
+                <p className="text-[10px] font-bold text-sky-500 uppercase tracking-wider mb-3">📸 Best Photo Spots</p>
+                <div className="space-y-2">
+                  {plan.bestPhotoSpots.map((s: string, i: number) => (
+                    <div key={i} className="flex items-center gap-2 p-2.5 bg-sky-50/50 rounded-xl">
+                      <span className="text-lg">{['📸','🤳','🏙️','🌅','🎨','🏛️'][i % 6]}</span>
+                      <p className="text-[12px] font-semibold text-[#0E0E0E]">{s}</p>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+            {plan.whereToStay?.length > 0 && (
+              <div className="bg-white rounded-2xl p-5 border border-indigo-100 shadow-sm">
+                <p className="text-[10px] font-bold text-indigo-500 uppercase tracking-wider mb-3">🏨 Where to Stay in {plan.destination}</p>
+                <div className="space-y-2">
+                  {plan.whereToStay.map((h: any, i: number) => (
+                    <div key={i} className="flex items-start gap-3 p-3 bg-indigo-50/50 rounded-xl">
+                      <span className="text-2xl">{h.type === 'luxury' ? '🏩' : h.type === 'mid' ? '🏨' : '🏠'}</span>
+                      <div className="flex-1">
+                        <div className="flex items-center justify-between">
+                          <p className="text-[13px] font-extrabold text-[#0E0E0E]">{h.name}</p>
+                          <span className="text-[11px] font-bold text-indigo-500">RM {h.pricePerNight}/night</span>
+                        </div>
+                        <p className="text-[11px] text-[#6B7280] mt-0.5">{h.description}</p>
+                        {h.distance && <p className="text-[10px] text-indigo-400 mt-0.5">📍 {h.distance}</p>}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+            {plan.budgetBreakdown?.savingsTips?.length > 0 && (
+              <div className="bg-white rounded-2xl p-5 border border-green-100 shadow-sm">
+                <p className="text-[10px] font-bold text-green-500 uppercase tracking-wider mb-3">💰 Money-Saving Tips for {plan.destination}</p>
+                <div className="space-y-2">
+                  {plan.budgetBreakdown.savingsTips.map((t: string, i: number) => (
+                    <div key={i} className="flex items-start gap-2 p-2.5 bg-green-50/50 rounded-xl">
+                      <span className="text-lg">💡</span>
+                      <p className="text-[12px] font-semibold text-[#5C4A3A]">{t}</p>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+          </div>
+        )}
       </div>      {/* Bottom Actions */}
       <div className="fixed bottom-20 left-0 right-0 px-5 pb-6 pt-4 z-40" style={{ background: 'linear-gradient(to top, #FAFAF8 60%, transparent)' }}>
         <div className="flex gap-3">
@@ -1795,7 +1884,7 @@ export default function Page() {
             // Fallback: if userId is empty, try fetching from API
             if (!uid && token) {
               try {
-                const meRes = await fetch('http://localhost:3001/api/v1/auth/me', { headers: { Authorization: `Bearer ${token}` } });
+                const meRes = await fetch('/api/auth/me', { headers: { Authorization: `Bearer ${token}` } });
                 const meData = await meRes.json();
                 uid = meData.data?.id || meData.id || '';
                 if (uid) localStorage.setItem('userId', uid);
@@ -1824,12 +1913,11 @@ export default function Page() {
               fullPlan: plan,
             };
             try {
-              const r = await fetch(`http://localhost:3001/api/v1/auth/me/trips?userId=${uid}`, {
-                method: 'POST', headers, body: JSON.stringify(tripData),
-              });
-              if (r.ok) { toast.success('✅ Trip saved! View in My Trips'); }
-              else { const d = await r.json().catch(()=>({})); toast.error('❌ ' + ((d as any).message || 'Save failed')); }
-            } catch { toast.error('❌ Network error'); }
+              const trips = JSON.parse(localStorage.getItem('saved_trips') || '[]');
+              trips.unshift({ ...tripData, id: 'trip_' + Date.now(), savedAt: new Date().toISOString() });
+              localStorage.setItem('saved_trips', JSON.stringify(trips.slice(0, 50)));
+              toast.success('✅ Trip saved! View in My Trips');
+            } catch { toast.error('❌ Save failed'); }
           }} className="btn-primary flex-1 text-sm py-3.5">💾 Save</button>
         </div>
       </div>
@@ -2017,7 +2105,7 @@ export default function Page() {
                     {nearbyPlaces.map((np: any) => (
                       <div key={np.id} onClick={async () => {
                         setNearbyDetail(null);
-                        try { const r=await fetch(`http://localhost:3001/api/v1/places/details/${np.id}`); const d=await r.json(); setNearbyDetail(d.data||np); }
+                        try { const r=await fetch(`/api/places/details/${np.id}`); const d=await r.json(); setNearbyDetail(d.data||np); }
                         catch { setNearbyDetail(np); }
                       }} className="flex items-center gap-2 p-2 rounded-xl hover:bg-[#FDF6ED] transition-colors cursor-pointer">
                         <div className="w-12 h-12 rounded-xl bg-[#EDE4D8] flex items-center justify-center text-lg flex-shrink-0 overflow-hidden">

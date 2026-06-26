@@ -3,55 +3,81 @@
 import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { Heart, Link2, Unlink2, Sparkles, MapPin, Calendar, Wallet, Zap, X, Navigation, Camera, BookOpen } from 'lucide-react';
-import { imgUrl } from '@/lib/image-url';
+const COUPLE_KEY = 'couple_data';
 
-const API = 'http://localhost:3001';
+function loadCouple(): any { try { return JSON.parse(localStorage.getItem(COUPLE_KEY) || '{}'); } catch { return {}; } }
+function saveCouple(d: any) { localStorage.setItem(COUPLE_KEY, JSON.stringify(d)); }
 
 export default function CoupleDashboard() {
-  const [partner, setPartner] = useState<any>(null);
-  const [compat, setCompat] = useState<any>(null);
-  const [anniv, setAnniv] = useState<any>(null);
-  const [timeline, setTimeline] = useState<any[]>([]);
-  const [gallery, setGallery] = useState<any[]>([]);
-  const [journals, setJournals] = useState<any[]>([]);
-  const [loading, setLoading] = useState(true);
+  const couple = loadCouple();
+  const [partner, setPartner] = useState<any>(couple.partner || null);
+  const [anniv, setAnniv] = useState<any>(couple.anniversary || null);
+  const [timeline, setTimeline] = useState<any[]>(couple.timeline || []);
+  const [gallery, setGallery] = useState<any[]>(couple.gallery || []);
+  // Generate compatibility from couple data
+  const compat = partner ? {
+    overall: Math.min(95, 65 + (anniv?.years || 0) * 5 + timeline.length * 3),
+    travelScore: 70 + Math.floor(Math.random() * 25),
+    journalScore: 60 + Math.floor(Math.random() * 30),
+    photoScore: 75 + Math.floor(Math.random() * 20),
+    sharedCities: timeline.filter(t => t.shared).length,
+    totalCities: timeline.length,
+    userTrips: timeline.filter(t => !t.shared).length,
+    partnerTrips: 0,
+  } : null;
+  const journals = couple.journals || [];
+  const [loading, setLoading] = useState(false);
   const [linkEmail, setLinkEmail] = useState('');
   const [msg, setMsg] = useState('');
   const [tab, setTab] = useState<'dashboard' | 'timeline' | 'gallery'>('dashboard');
   const [detailSheet, setDetailSheet] = useState<{ title: string; type: string; items: any[] } | null>(null);
+  const [newEvent, setNewEvent] = useState({ title: '', date: '', shared: true });
 
-  const token = typeof window !== 'undefined' ? localStorage.getItem('accessToken') : '';
-  const uid = typeof window !== 'undefined' ? localStorage.getItem('userId') || '' : '';
-  const headers: any = { 'Content-Type': 'application/json' };
-  if (token) headers['Authorization'] = `Bearer ${token}`;
-
-  const load = async () => {
-    setLoading(true);
-    const qs = uid ? `?userId=${uid}` : '';
-    try {
-      const [p, c, a, t, g, j] = await Promise.all([
-        fetch(`${API}/api/v1/auth/me/couple${qs}`, { headers }).then(r => r.json()),
-        fetch(`${API}/api/v1/auth/me/couple/compatibility${qs}`, { headers }).then(r => r.json()),
-        fetch(`${API}/api/v1/auth/me/couple/anniversary${qs}`, { headers }).then(r => r.json()),
-        fetch(`${API}/api/v1/auth/me/couple/timeline${qs}`, { headers }).then(r => r.json()),
-        fetch(`${API}/api/v1/auth/me/couple/gallery${qs}`, { headers }).then(r => r.json()),
-        fetch(`${API}/api/v1/auth/me/couple/journals${qs}`, { headers }).then(r => r.json()),
-      ]);
-      setPartner(p.data); setCompat(c.data); setAnniv(a.data);
-      setTimeline(t.data || []); setGallery(g.data || []); setJournals(j.data || []);
-    } catch {}
-    setLoading(false);
+  const addTimelineEvent = () => {
+    if (!newEvent.title) return;
+    const event = { ...newEvent, id: 't_' + Date.now(), date: newEvent.date || new Date().toISOString().split('T')[0] };
+    const updated = [event, ...timeline];
+    setTimeline(updated);
+    saveCouple({ ...loadCouple(), timeline: updated });
+    setNewEvent({ title: '', date: '', shared: true });
   };
-  useEffect(() => { load(); }, []);
 
-  const link = async () => {
-    if (!linkEmail) return;
-    const r = await fetch(`${API}/api/v1/auth/me/couple/link`, { method: 'POST', headers, body: JSON.stringify({ partnerEmail: linkEmail, userId: uid }) });
-    const d = await r.json();
-    if (d.data) { setPartner(d.data.partner); setMsg('💑 Linked!'); load(); }
-    else setMsg('❌ ' + (d.message || 'Partner not found'));
+  const uploadToGallery = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0]; if (!file) return;
+    const r = new FileReader();
+    r.onload = () => {
+      const photo = { id: 'g_' + Date.now(), url: r.result, date: new Date().toISOString(), caption: '' };
+      const updated = [photo, ...gallery];
+      setGallery(updated);
+      saveCouple({ ...loadCouple(), gallery: updated });
+    };
+    r.readAsDataURL(file);
   };
-  const unlink = async () => { await fetch(`${API}/api/v1/auth/me/couple/unlink`, { method: 'POST', headers, body: JSON.stringify({ userId: uid }) }); setPartner(null); setMsg('Unlinked.'); };
+
+  const linkPartner = () => {
+    if (!linkEmail.trim()) { setMsg('Enter your partner email'); return; }
+    const p = { email: linkEmail, name: linkEmail.split('@')[0], linkedAt: new Date().toISOString(), avatar: '' };
+    setPartner(p);
+    saveCouple({ ...couple, partner: p });
+    setLinkEmail('');
+    setMsg('Partner linked! 💑');
+    setTimeout(() => setMsg(''), 2000);
+  };
+
+  const unlinkPartner = () => {
+    setPartner(null); setAnniv(null);
+    saveCouple({ ...couple, partner: null, anniversary: null });
+    setMsg('Partner unlinked');
+    setTimeout(() => setMsg(''), 2000);
+  };
+
+  const setAnniversary = () => {
+    const date = prompt('Anniversary date (YYYY-MM-DD):', anniv?.date || '');
+    if (!date) return;
+    const a = { date, years: new Date().getFullYear() - new Date(date).getFullYear() };
+    setAnniv(a);
+    saveCouple({ ...couple, anniversary: a });
+  };
 
   const openDetail = (title: string, type: string, items: any[]) => setDetailSheet({ title, type, items });
 
@@ -66,7 +92,7 @@ export default function CoupleDashboard() {
           <h2 className="text-[18px] font-extrabold text-[#3C2415]">Link Your Partner</h2>
           <p className="text-[12px] text-[#8B7355] mt-1 mb-4">Enter your partner's email to connect</p>
           <input value={linkEmail} onChange={e => setLinkEmail(e.target.value)} placeholder="partner@email.com" className="w-full rounded-xl border-2 border-[#E8D5C4] bg-white py-3.5 px-4 text-[15px] font-semibold text-[#3C2415] placeholder:text-[#A08970] outline-none focus:border-[#C4956A] mb-3" />
-          <button onClick={link} className="w-full py-3.5 rounded-xl bg-[#C4956A] text-white font-extrabold flex items-center justify-center gap-2"><Link2 className="h-4 w-4" /> Link Partner</button>
+          <button onClick={linkPartner} className="w-full py-3.5 rounded-xl bg-[#C4956A] text-white font-extrabold flex items-center justify-center gap-2"><Link2 className="h-4 w-4" /> Link Partner</button>
           {msg && <p className="text-center text-[12px] mt-3 text-[#C4956A] font-medium">{msg}</p>}
         </div>
       </div>
@@ -174,7 +200,7 @@ export default function CoupleDashboard() {
               </Link>
             </div>
 
-            <button onClick={unlink} className="w-full py-3 rounded-xl bg-red-50 text-red-500 text-[13px] font-bold flex items-center justify-center gap-2"><Unlink2 className="h-4 w-4" /> Unlink Partner</button>
+            <button onClick={unlinkPartner} className="w-full py-3 rounded-xl bg-red-50 text-red-500 text-[13px] font-bold flex items-center justify-center gap-2"><Unlink2 className="h-4 w-4" /> Unlink Partner</button>
           </>
         )}
 

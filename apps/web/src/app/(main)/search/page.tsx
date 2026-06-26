@@ -16,7 +16,7 @@ import { toast } from 'sonner';
 import { PlaceDetailView } from '@/components/places/place-detail-view';
 import { ImageViewer } from '@/components/shared/image-viewer';
 
-const API = 'http://localhost:3001/api/v1';
+const API = '/api';
 const SEARCH_LIMIT = 40;
 
 interface PlaceResult {
@@ -60,21 +60,21 @@ export default function SearchPage() {
 
   // Real GPS detection
   useEffect(() => {
-    if (mapLoc) { setMyLat(mapLoc.lat); setMyLng(mapLoc.lng); return; }
     if (!navigator.geolocation) return;
-    navigator.geolocation.getCurrentPosition(
+    const watchId = navigator.geolocation.watchPosition(
       pos => { setMyLat(pos.coords.latitude); setMyLng(pos.coords.longitude); },
-      () => {}, // Silent fail — use default KL
-      { enableHighAccuracy: true, timeout: 10000, maximumAge: 300000 }
+      () => {}, // use default KL if denied
+      { enableHighAccuracy: true, timeout: 30000, maximumAge: 0 }
     );
-  }, [mapLoc]);
+    return () => navigator.geolocation.clearWatch(watchId);
+  }, []);
 
   // Load following list
   useEffect(() => {
     const token = localStorage.getItem('accessToken');
     if (!token) return;
     const uid = localStorage.getItem('userId') || '';
-    fetch(`http://localhost:3001/api/v1/auth/user/${uid}/following`, { headers: { 'Authorization': `Bearer ${token}` } })
+    fetch(`/api/auth/user/${uid}/following`, { headers: { 'Authorization': `Bearer ${token}` } })
       .then(r => r.json()).then(d => setFollowing(new Set((d.data || []).map((u: any) => u.id)))).catch(() => {});
   }, []);
 
@@ -83,7 +83,7 @@ export default function SearchPage() {
     if (debouncedQuery.length < 2 || searchTab !== 'users') { setUserResults([]); return; }
     setUserLoading(true);
     const token = localStorage.getItem('accessToken');
-    fetch(`http://localhost:3001/api/v1/admin/users?q=${encodeURIComponent(debouncedQuery)}`, {
+    fetch(`/api/admin/users?q=${encodeURIComponent(debouncedQuery)}`, {
       headers: token ? { 'Authorization': `Bearer ${token}` } : {},
     }).then(r => r.json()).then(d => {
       setUserResults((d.data || d.users || []).filter((u: any) => (u.displayName || u.email || '').toLowerCase().includes(debouncedQuery.toLowerCase())));
@@ -95,7 +95,7 @@ export default function SearchPage() {
     const token = localStorage.getItem('accessToken');
     if (!token) return;
     const isFollowing = following.has(targetId);
-    await fetch(`http://localhost:3001/api/v1/auth/follow/${targetId}`, {
+    await fetch(`/api/auth/follow/${targetId}`, {
       method: isFollowing ? 'DELETE' : 'POST',
       headers: { 'Authorization': `Bearer ${token}` },
     });
@@ -132,7 +132,7 @@ export default function SearchPage() {
 
   const openDetail = (p: PlaceResult) => {
     setDetailPlace(p); setDetailFull(null); setDetailPhotoIdx(0);
-    fetch(`${API}/places/details/${p.id}`).then(r => r.json()).then(j => setDetailFull(j.data)).catch(() => {});
+    fetch(`${API}/places/${p.id}`).then(r => r.json()).then(j => setDetailFull(j.data)).catch(() => {});
   };
 
   const hasResults = query.length >= 2;

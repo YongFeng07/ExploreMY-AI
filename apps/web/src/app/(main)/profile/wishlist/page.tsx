@@ -4,45 +4,34 @@ import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { Plus, Trash2, X, Navigation, ExternalLink } from 'lucide-react';
 
-const API = 'http://localhost:3001';
+const WISH_KEY = 'wishlist';
 const EMOJIS = ['🗼', '🏝️', '🏔️', '🌍', '🏛️', '🎌', '🏖️', '🗽', '🇯🇵', '🇫🇷', '🇬🇧', '🇦🇺', '🇹🇭', '🇮🇩', '🇰🇷', '🇲🇾'];
 
+function loadWish() { try { return JSON.parse(localStorage.getItem(WISH_KEY) || '[]'); } catch { return []; } }
+function saveWish(items: any[]) { localStorage.setItem(WISH_KEY, JSON.stringify(items)); }
+
 export default function WishlistPage() {
-  const [items, setItems] = useState<any[]>([]);
+  const [items, setItems] = useState<any[]>(loadWish);
   const [show, setShow] = useState(false);
   const [detailItem, setDetailItem] = useState<any>(null);
   const [f, setF] = useState({ destination: '', emoji: '🏝️', estimatedCost: 0, priority: 'medium', notes: '' });
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState('');
-  const token = typeof window !== 'undefined' ? localStorage.getItem('accessToken') : '';
-  const uid = typeof window !== 'undefined' ? localStorage.getItem('userId') || '' : '';
 
-  const authHeaders = () => ({ 'Authorization': `Bearer ${token}` });
-
-  const load = () => {
-    fetch(`${API}/api/v1/auth/me/wishlist?userId=${uid}`, { headers: authHeaders() })
-      .then(r => r.json()).then(d => setItems(d.data || [])).catch(() => {});
-  };
-  useEffect(() => { load(); }, []);
-
-  const add = async () => {
+  const add = () => {
     if (!f.destination.trim()) { setError('Destination is required'); return; }
     setSaving(true); setError('');
-    try {
-      const r = await fetch(`${API}/api/v1/auth/me/wishlist?userId=${uid}`, {
-        method: 'POST', headers: { ...authHeaders(), 'Content-Type': 'application/json' },
-        body: JSON.stringify({...f, userId: uid}),
-      });
-      if (r.ok) { setF({ destination: '', emoji: '🏝️', estimatedCost: 0, priority: 'medium', notes: '' }); setShow(false); load(); }
-      else { const d = await r.json(); setError(d.message || 'Failed'); }
-    } catch { setError('Network error'); }
+    const item = { id: 'w_' + Date.now(), ...f, createdAt: new Date().toISOString() };
+    const updated = [item, ...items];
+    saveWish(updated); setItems(updated);
+    setF({ destination: '', emoji: '🏝️', estimatedCost: 0, priority: 'medium', notes: '' }); setShow(false);
     setSaving(false);
   };
 
-  const remove = async (id: string) => {
-    await fetch(`${API}/api/v1/auth/me/wishlist/${id}?userId=${uid}`, { method: 'DELETE', headers: authHeaders() });
+  const remove = (id: string) => {
+    const updated = items.filter((i: any) => i.id !== id);
+    saveWish(updated); setItems(updated);
     if (detailItem?.id === id) setDetailItem(null);
-    load();
   };
 
   return (

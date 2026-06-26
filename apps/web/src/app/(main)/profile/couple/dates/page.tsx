@@ -11,15 +11,15 @@ export default function CoupleDatesPage() {
   const [history, setHistory] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [tab, setTab] = useState<'planned' | 'history'>('planned');
-  const token = typeof window !== 'undefined' ? localStorage.getItem('accessToken') : '';
-  const uid = typeof window !== 'undefined' ? localStorage.getItem('userId') || '' : '';
+  const token = typeof window !== 'undefined' ? '' : '';
+  const uid = typeof window !== 'undefined' ? '' || '' : '';
 
   const load = async () => {
     setLoading(true);
     const headers: any = {};
     if (token) headers['Authorization'] = `Bearer ${token}`;
     try {
-      const r = await fetch(`http://localhost:3001/api/v1/auth/me/trips?userId=${uid}`, { headers });
+      const r = await fetch(`/api/auth/me/trips?userId=${uid}`, { headers });
       const d = await r.json();
       const all = (d.data || []);
       // Filter: date plans (from /date) AND couple weekend plans
@@ -109,7 +109,7 @@ export default function CoupleDatesPage() {
             </div>
             {!d.completed && (
               <button onClick={async (e) => { e.stopPropagation();
-                await fetch(`http://localhost:3001/api/v1/auth/me/trips/${d.id}/complete?userId=${uid}`, { method: 'PATCH', headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` }, body: JSON.stringify({ completed: true, userId: uid }) });
+                await fetch(`/api/auth/me/trips/${d.id}/complete?userId=${uid}`, { method: 'PATCH', headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` }, body: JSON.stringify({ completed: true, userId: uid }) });
                 load();
               }} className="w-full mt-3 py-2 rounded-xl bg-emerald-50 text-emerald-600 text-[13px] font-bold hover:bg-emerald-100 transition-colors">
                 ✅ Mark as Completed

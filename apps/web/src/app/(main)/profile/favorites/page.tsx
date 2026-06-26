@@ -3,31 +3,19 @@
 import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { Star, MapPin, Trash2, X, Navigation, ExternalLink } from 'lucide-react';
-import { getAuthHeaders } from '@/stores/auth-store';
+type FavItem = { id: string; placeName: string; city: string; category: string; rating: number; photo: string; savedAt: string };
 
-const API = 'http://localhost:3001';
-function imgUrl(url: string | null | undefined): string | null {
-  if (!url) return null;
-  if (url.startsWith('http')) return url;
-  return `${API}${url.startsWith('/') ? '' : '/'}${url}`;
-}
+function loadFavs(): FavItem[] { try { return JSON.parse(localStorage.getItem('favorites') || '[]'); } catch { return []; } }
+function saveFavs(items: FavItem[]) { localStorage.setItem('favorites', JSON.stringify(items)); }
 
 export default function FavoritesPage() {
-  const uid = typeof window !== 'undefined' ? localStorage.getItem('userId') || '' : '';
-  const [items, setItems] = useState<any[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [detailItem, setDetailItem] = useState<any>(null);
+  const [items, setItems] = useState<FavItem[]>(loadFavs);
+  const [loading, setLoading] = useState(false);
+  const [detailItem, setDetailItem] = useState<FavItem | null>(null);
 
-  const load = () => {
-    setLoading(true);
-    fetch(`${API}/api/v1/auth/me/favorites?userId=${uid}`, { headers: getAuthHeaders() })
-      .then(r => r.json()).then(d => { setItems(d.data || []); setLoading(false); }).catch(() => setLoading(false));
-  };
-  useEffect(() => { load(); }, []);
-
-  const remove = async (id: string) => {
-    await fetch(`${API}/api/v1/auth/me/favorites/${id}?userId=${uid}`, { method: 'DELETE', headers: getAuthHeaders() });
-    setItems(items.filter(i => i.id !== id));
+  const remove = (id: string) => {
+    const updated = items.filter(i => i.id !== id);
+    saveFavs(updated); setItems(updated);
     if (detailItem?.id === id) setDetailItem(null);
   };
 
@@ -56,7 +44,7 @@ export default function FavoritesPage() {
         {items.map((item, i) => (
           <div key={i} onClick={() => setDetailItem(item)}
             className="flex items-center gap-3 p-3 bg-white rounded-2xl border border-[#E8D5C4]/70 shadow-sm group cursor-pointer hover:border-amber-200 hover:shadow-md transition-all active:scale-[0.98]">
-            {item.photo ? <img src={imgUrl(item.photo)!} className="w-14 h-14 rounded-xl object-cover flex-shrink-0" alt="" /> :
+            {item.photo ? <img src={item.photo || ''} className="w-14 h-14 rounded-xl object-cover flex-shrink-0" alt="" /> :
               <div className="w-14 h-14 rounded-xl bg-[#FDF0E0] flex items-center justify-center text-xl flex-shrink-0">📍</div>}
             <div className="flex-1 min-w-0">
               <p className="text-[14px] font-extrabold text-[#3C2415] truncate">{item.placeName}</p>

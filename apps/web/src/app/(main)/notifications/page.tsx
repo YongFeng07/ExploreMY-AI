@@ -11,14 +11,14 @@ export default function NotificationsPage() {
 
   const load = () => {
     if (!token) { setLoading(false); return; }
-    fetch('http://localhost:3001/api/v1/auth/me/notifications', { headers: { 'Authorization': `Bearer ${token}` } })
+    fetch('/api/auth/me/notifications', { headers: { 'Authorization': `Bearer ${token}` } })
       .then(r => r.json()).then(d => { setList(d.data || []); setLoading(false); }).catch(() => setLoading(false));
   };
   useEffect(() => { load(); }, []);
 
   const markRead = async (id: string) => {
     if (!token) return;
-    await fetch(`http://localhost:3001/api/v1/auth/me/notifications/${id}/read`, { method: 'PATCH', headers: { 'Authorization': `Bearer ${token}` } });
+    await fetch(`/api/auth/me/notifications/${id}/read`, { method: 'PATCH', headers: { 'Authorization': `Bearer ${token}` } });
     setList(prev => prev.map(n => n.id === id ? { ...n, isRead: true } : n));
   };
 

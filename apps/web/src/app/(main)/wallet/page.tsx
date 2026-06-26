@@ -5,7 +5,37 @@ import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { Sparkles, Wallet, Target, TrendingUp, Clock, Users, Heart, Gift, Plus, ChevronRight, Zap, PiggyBank, CalendarDays, MapPin, Trophy } from 'lucide-react';
 import { cn } from '@/lib/utils';
-import { getAuthHeaders } from '@/stores/auth-store';
+
+type Goal = {
+  id: string;
+  tripName: string;
+  destination: string;
+  targetAmount: number;
+  currentSavings: number;
+  progressPct: number;
+  targetDate: string;
+  description: string;
+  walletType: string;
+  tripDays: number;
+  contributions: { amount: number; note: string; date: string }[];
+  createdAt: string;
+  forecastDate?: string;
+  savingsPlan?: any;
+  milestones?: any[];
+  estimatedTripCost?: number;
+  accommodationEst?: number;
+  transportEst?: number;
+  foodEst?: number;
+  activitiesEst?: number;
+  aiTips?: string[];
+};
+
+function loadGoals(): Goal[] {
+  try { return JSON.parse(localStorage.getItem('wallet_goals') || '[]'); } catch { return []; }
+}
+function saveGoals(goals: Goal[]) {
+  localStorage.setItem('wallet_goals', JSON.stringify(goals));
+}
 
 const WALLET_TYPES = [
   {v:'SOLO',e:'🧑',l:'Solo',d:'Personal travel goal'},
@@ -18,9 +48,6 @@ export default function WalletPage() {
   const [goals, setGoals] = useState<any[]>([]);
   const [selGoal, setSelGoal] = useState<any>(null);
   const [loading, setLoading] = useState(false);
-  const token = typeof window !== 'undefined' ? localStorage.getItem('accessToken') : '';
-  const userId = typeof window !== 'undefined' ? (localStorage.getItem('userId') || '') : '';
-
   // Create form
   const [tripName, setTripName] = useState('');
   const [destination, setDestination] = useState('');
@@ -35,53 +62,60 @@ export default function WalletPage() {
   const [showCoinDrop, setShowCoinDrop] = useState(false);
   const [saveError, setSaveError] = useState('');
 
-  // Load goals on mount
+  // Load goals from localStorage
   useEffect(() => {
-    if (!userId) return;
-    fetch(`http://localhost:3001/api/v1/travel-wallet/goals/user/${userId}`, {
-      headers: getAuthHeaders(),
-    }).then(r => r.json()).then(d => setGoals(d.data || [])).catch(() => {});
+    setGoals(loadGoals());
   }, []);
 
-  // Fetch accurate trip estimate
+  // Trip estimate (simple calculation)
   useEffect(() => {
     if (!selGoal?.destination) return;
     const days = tripDays || 3;
-    fetch(`http://localhost:3001/api/v1/travel-wallet/estimate?destination=${encodeURIComponent(selGoal.destination)}&days=${days}&style=recommended`)
-      .then(r=>r.json()).then(d=>{
-        if (d.data) setSelGoal((prev:any)=>({...prev, accommodationEst:d.data.accommodation, transportEst:d.data.transport, foodEst:d.data.food, activitiesEst:d.data.activities, estimatedTripCost:d.data.totalCost, tripDays: days}));
-      }).catch(()=>{});
+    const base = days * 200;
+    setSelGoal((prev: any) => ({
+      ...prev,
+      accommodationEst: Math.round(base * 0.35),
+      transportEst: Math.round(base * 0.25),
+      foodEst: Math.round(base * 0.2),
+      activitiesEst: Math.round(base * 0.2),
+      estimatedTripCost: base,
+      tripDays: days,
+    }));
   }, [selGoal?.destination, tripDays]);
 
   const createGoal = async () => {
     if (!tripName || !destination) { setSaveError('Trip name and destination are required'); return; }
     setLoading(true); setSaveError('');
-    try {
-      const res = await fetch('http://localhost:3001/api/v1/travel-wallet/goals',{
-        method:'POST',headers:{'Content-Type':'application/json', ...getAuthHeaders()},
-        body:JSON.stringify({userId,tripName,destination,targetAmount:Number(targetAmount),targetDate:targetDate||undefined,description,walletType,tripDays}),
-      });
-      const d = await res.json();
-      if (d.data) { setGoals([d.data,...goals]); setView('detail'); setSelGoal(d.data); }
-      else { setSaveError(d.message || 'Failed to create goal'); }
-    } catch(e) { setSaveError('Network error'); }
+    const newGoal: Goal = {
+      id: 'goal_' + Date.now(),
+      tripName, destination,
+      targetAmount: Number(targetAmount),
+      currentSavings: 0, progressPct: 0,
+      targetDate: targetDate || '',
+      description, walletType, tripDays,
+      contributions: [],
+      createdAt: new Date().toISOString(),
+      savingsPlan: { dailyTarget: Math.round(targetAmount / 90), weeklyTarget: Math.round(targetAmount / 13), monthlyTarget: Math.round(targetAmount / 3), feasibilityNote: `Save RM ${Math.round(targetAmount / 90)}/day to reach your goal in ~3 months.` },
+      milestones: [25,50,75,100].map(p => ({ title: `${p}% of Goal`, reached: false, badgeEmoji: ['🌱','🌿','🌳','🏆'][p/25-1], remaining: Math.round(targetAmount * (1 - p/100)) })),
+      aiTips: ['Set up auto-transfer on payday', 'Cut one dining-out meal per week', 'Use cashback apps for groceries', 'Track expenses in a simple note'],
+    };
+    const all = [newGoal, ...goals];
+    saveGoals(all);
+    setGoals(all);
+    setView('detail');
+    setSelGoal(newGoal);
     setLoading(false);
   };
 
   const contribute = async () => {
-    if (!selGoal||contributeAmount<=0) return;
-    try {
-      const res = await fetch(`http://localhost:3001/api/v1/travel-wallet/goals/${selGoal.id}/contribute`,{
-        method:'POST',headers:{'Content-Type':'application/json', ...getAuthHeaders()},
-        body:JSON.stringify({userId,amount:contributeAmount,note:'Manual contribution'}),
-      });
-      const d = await res.json();
-      if (d.data) {
-        setSelGoal(d.data);
-        setGoals(prev => prev.map(g => g.id === d.data.id ? d.data : g));
-        setContributedAmount(prev => prev + contributeAmount);
-      }
-    } catch(e) {}
+    if (!selGoal || contributeAmount <= 0) return;
+    const updated = { ...selGoal };
+    updated.currentSavings = (updated.currentSavings || 0) + contributeAmount;
+    updated.progressPct = Math.round((updated.currentSavings / updated.targetAmount) * 100);
+    updated.contributions = [...(updated.contributions || []), { amount: contributeAmount, note: 'Manual contribution', date: new Date().toISOString() }];
+    setSelGoal(updated);
+    setGoals(prev => { const n = prev.map(g => g.id === updated.id ? updated : g); saveGoals(n); return n; });
+    setContributedAmount(prev => prev + contributeAmount);
   };
 
   /* ── LIST VIEW ── */
@@ -217,22 +251,10 @@ export default function WalletPage() {
     if (!selGoal||contributeAmount<=0) return;
     setShowCoinDrop(true);
     const prevPct = selGoal.progressPct || 0;
-    try {
-      const res = await fetch(`http://localhost:3001/api/v1/travel-wallet/goals/${selGoal.id}/contribute`,{
-        method:'POST',headers:{'Content-Type':'application/json', ...getAuthHeaders()},
-        body:JSON.stringify({userId,amount:contributeAmount,note:'Manual contribution'}),
-      });
-      const d = await res.json();
-      if (d.data) {
-        setSelGoal(d.data);
-        setGoals(prev => prev.map(g => g.id === d.data.id ? d.data : g));
-        setContributedAmount(prev => prev + contributeAmount);
-        const newPct = d.data.progressPct || 0;
-        // Check if milestone crossed
-        const crossed = [25,50,75,100].find(m => prevPct < m && newPct >= m);
-        if (crossed) setTimeout(() => setShowCelebrate(true), 600);
-      }
-    } catch(e) {}
+    await contribute();
+    const newPct = Math.round(((selGoal.currentSavings||0) + contributeAmount) / selGoal.targetAmount * 100);
+    const crossed = [25,50,75,100].find(m => prevPct < m && newPct >= m);
+    if (crossed) setTimeout(() => setShowCelebrate(true), 600);
     setTimeout(() => setShowCoinDrop(false), 1000);
     if (showCelebrate) setTimeout(() => setShowCelebrate(false), 3000);
   };

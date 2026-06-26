@@ -13,7 +13,7 @@ import {
   Navigation, Star, Globe, Search, Clock, X,
 } from 'lucide-react';
 
-const API = 'http://127.0.0.1:3001/api/v1';
+const API = '/api';
 
 const REGIONS: { name: string; cities: { n: string; c: string }[] }[] = [
   { name: '🇲🇾 Malaysia', cities: [
@@ -72,7 +72,7 @@ export default function AIPlannerPage() {
   useEffect(() => {
     if (detailStop?.placeId) {
       setStopDetails(null); setStopPhotoIdx(0);
-      fetch(`${API}/places/details/${detailStop.placeId}`).then(r => r.json()).then(j => setStopDetails(j.data)).catch(() => {});
+      fetch(`${API}/places/${detailStop.placeId}`).then(r => r.json()).then(j => setStopDetails(j.data)).catch(() => {});
     }
   }, [detailStop?.placeId]);
 
@@ -273,13 +273,11 @@ export default function AIPlannerPage() {
           )}
           <div className="flex gap-2 pb-4">
             <button onClick={() => setPlan(null)} className="flex-1 rounded-xl border border-[#E8D5C4] bg-white py-3 text-sm font-extrabold text-[#3C2415] hover:bg-[#FDF0E0]"><RefreshCw className="inline h-4 w-4 mr-1.5" />Modify</button>
-            <button onClick={async () => {
-              const token = localStorage.getItem('accessToken');
-              if (!token || !plan) return;
-              await fetch('http://localhost:3001/api/v1/auth/me/trips', {
-                method: 'POST', headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
-                body: JSON.stringify({ title: plan.title, destination: plan.destination, days: plan.days?.length || 2, totalCost: plan.totalCost, startDate: new Date().toISOString().split('T')[0], endDate: new Date().toISOString().split('T')[0] }),
-              });
+            <button onClick={() => {
+              if (!plan) return;
+              const trips = JSON.parse(localStorage.getItem('saved_trips') || '[]');
+              trips.unshift({ title: plan.title, destination: plan.destination, days: plan.days?.length || 2, totalCost: plan.totalCost, startDate: new Date().toISOString().split('T')[0], endDate: new Date().toISOString().split('T')[0], savedAt: new Date().toISOString() });
+              localStorage.setItem('saved_trips', JSON.stringify(trips.slice(0, 20)));
               toast.success('Trip saved! View in My Trips');
             }} className="flex-1 rounded-xl border border-[#E8D5C4] bg-white py-3 text-sm font-extrabold text-[#3C2415] hover:bg-[#FDF0E0]"><Bookmark className="inline h-4 w-4 mr-1.5" />Save</button>
             <button onClick={() => { navigator.clipboard.writeText(window.location.href); toast.success('Link copied!'); }} className="flex-1 rounded-xl border border-[#E8D5C4] bg-white py-3 text-sm font-extrabold text-[#3C2415] hover:bg-[#FDF0E0]"><Share2 className="inline h-4 w-4 mr-1.5" />Share</button>

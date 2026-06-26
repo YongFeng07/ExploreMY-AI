@@ -4,7 +4,7 @@ import { useState, useEffect, useRef } from 'react';
 import Link from 'next/link';
 import { X, Navigation, ExternalLink, MapPin, Plus, Upload, Loader2, Camera, Edit3, Trash2, Check } from 'lucide-react';
 
-const API = 'http://localhost:3001';
+const API = '';
 
 function imgUrl(url: string | null | undefined): string | null {
   if (!url) return null;
@@ -24,8 +24,8 @@ export default function JournalPage() {
   const fileRef = useRef<HTMLInputElement>(null);
   const moods = ['😊', '😍', '🏖️', '🍜', '😅', '🤩', '🥰', '😎', '🌅', '✈️'];
 
-  const token = typeof window !== 'undefined' ? localStorage.getItem('accessToken') : '';
-  const uid = typeof window !== 'undefined' ? localStorage.getItem('userId') || '' : '';
+  const token = typeof window !== 'undefined' ? '' : '';
+  const uid = typeof window !== 'undefined' ? '' || '' : '';
   const authHeaders = (extra: any = {}) => ({ ...(token ? { Authorization: `Bearer ${token}` } : {}), ...extra });
 
   const load = () => {

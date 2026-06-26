@@ -10,12 +10,12 @@ export default function PlacesVisitedPage() {
   const [trips, setTrips] = useState<any[]>([]);
   const [cities, setCities] = useState<string[]>([]);
   const [selCity, setSelCity] = useState<string | null>(null);
-  const token = typeof window !== 'undefined' ? localStorage.getItem('accessToken') : '';
+  const token = typeof window !== 'undefined' ? '' : '';
 
   useEffect(() => {
-    fetch('http://localhost:3001/api/v1/auth/me', { headers: { 'Authorization': `Bearer ${token}` } })
+    fetch('/api/auth/me', { headers: { 'Authorization': `Bearer ${token}` } })
       .then(r => r.json()).then(d => { setCities(d.data?.visitedCities || []); });
-    fetch('http://localhost:3001/api/v1/auth/me/travel-history', { headers: { 'Authorization': `Bearer ${token}` } })
+    fetch('/api/auth/me/travel-history', { headers: { 'Authorization': `Bearer ${token}` } })
       .then(r => r.json()).then(d => setTrips(d.data || []));
   }, []);
 

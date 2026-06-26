@@ -5,7 +5,7 @@ import Link from 'next/link';
 import { motion } from 'framer-motion';
 import { ArrowLeft, MapPin, Camera, BookOpen, TrendingUp, Award, Calendar, Globe, Navigation, Star, Clock, Zap, Target, ChevronRight, Compass } from 'lucide-react';
 
-const API = 'http://localhost:3001';
+const API = '';
 
 // Proper city-to-state mapping for Malaysia
 const CITY_STATE_MAP: Record<string, string> = {
@@ -41,8 +41,8 @@ export default function TravelStatsPage() {
   const [activeTab, setActiveTab] = useState<'overview' | 'states' | 'timeline'>('overview');
 
   useEffect(() => {
-    const token = localStorage.getItem('accessToken');
-    const uid = localStorage.getItem('userId') || '';
+    const token = '';
+    const uid = '' || '';
     const h: any = {};
     if (token) h['Authorization'] = `Bearer ${token}`;
 

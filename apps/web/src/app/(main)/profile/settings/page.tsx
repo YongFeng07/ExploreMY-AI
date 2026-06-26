@@ -3,33 +3,28 @@
 import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { Bell, Shield, HelpCircle, ChevronRight } from 'lucide-react';
-import { useAuth } from '@/stores/auth-store';
+import { useUser } from '@clerk/nextjs';
 import { toast } from 'sonner';
 
 export default function SettingsPage() {
-  const { user } = useAuth();
+  const { user: clerkUser } = useUser();
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
   const [saved, setSaved] = useState(false);
 
   useEffect(() => {
-    if (user) {
-      setName(user.displayName || '');
-      setEmail(user.email || '');
+    if (clerkUser) {
+      setName(clerkUser.fullName || '');
+      setEmail(clerkUser.primaryEmailAddress?.emailAddress || '');
     }
-  }, [user]);
+  }, [clerkUser]);
 
   const save = async () => {
-    const token = localStorage.getItem('accessToken');
-    if (!token) return;
     try {
-      await fetch('http://localhost:3001/api/v1/auth/me', {
-        method: 'PATCH', headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
-        body: JSON.stringify({ displayName: name }),
-      });
+      if (clerkUser) await clerkUser.update({ firstName: name.split(' ')[0], lastName: name.split(' ').slice(1).join(' ') || undefined });
       setSaved(true); toast.success('Profile updated!');
       setTimeout(() => setSaved(false), 2000);
-    } catch {}
+    } catch { toast.error('Save failed'); }
   };
 
   return (

@@ -9,7 +9,7 @@ import { ImageViewer } from '@/components/shared/image-viewer';
 import { Star, Navigation, LocateFixed, Loader2, MapPin, Heart, Sparkles, Crosshair, ChevronRight } from 'lucide-react';
 import { formatDistance } from '@/lib/utils';
 
-const API = 'http://localhost:3001/api/v1';
+const API = '/api';
 const RADIUS = 20000; // 20km radius for more coverage
 
 const CATEGORIES = [
@@ -37,43 +37,38 @@ export default function ExplorePage() {
   const [fetchingLocation, setFetchingLocation] = useState(true);
   const [viewImages, setViewImages] = useState<string[] | null>(null);
 
-  // Load favorites with real userId
-  const uid = typeof window !== 'undefined' ? localStorage.getItem('userId') || '' : '';
-  const token = typeof window !== 'undefined' ? localStorage.getItem('accessToken') || '' : '';
-
+  // Load favorites from localStorage
   useEffect(() => {
-    const h: any = {};
-    if (token) h['Authorization'] = `Bearer ${token}`;
-    fetch(`${API.replace('/api/v1','')}/api/v1/auth/me/favorites?userId=${uid}`, { headers: h })
-      .then(r => r.json()).then(d => {
-        setFavorites(d.data || []);
-        setFavNames(new Set((d.data || []).map((f:any) => f.placeName)));
-      }).catch(() => {});
-  }, [uid]);
+    try {
+      const stored = JSON.parse(localStorage.getItem('favorites') || '[]');
+      setFavorites(stored);
+      setFavNames(new Set(stored.map((f: any) => f.placeName)));
+    } catch { /* noop */ }
+  }, []);
 
   const toggleFav = async (place: any) => {
     const name = place.name || place.placeName;
     const isFav = favNames.has(name);
-    const h: any = { 'Content-Type': 'application/json' };
-    if (token) h['Authorization'] = `Bearer ${token}`;
 
     if (isFav) {
-      const fav = favorites.find(f => f.placeName === name);
-      if (fav) {
-        await fetch(`${API.replace('/api/v1','')}/api/v1/auth/me/favorites/${fav.id}?userId=${uid}`, { method: 'DELETE', headers: h });
-        setFavorites(prev => prev.filter(f => f.id !== fav.id));
-        setFavNames(prev => { const n = new Set(prev); n.delete(name); return n; });
-      }
+      const updated = favorites.filter((f: any) => f.placeName !== name);
+      localStorage.setItem('favorites', JSON.stringify(updated));
+      setFavorites(updated);
+      setFavNames(prev => { const n = new Set(prev); n.delete(name); return n; });
     } else {
-      const r = await fetch(`${API.replace('/api/v1','')}/api/v1/auth/me/favorites?userId=${uid}`, {
-        method: 'POST', headers: h,
-        body: JSON.stringify({ userId: uid, placeName: name, city: place.city || '', category: place.category || '', rating: place.rating || 0, photo: place.photos?.[0] || '' }),
-      });
-      const d = await r.json();
-      if (d.data) {
-        setFavorites(prev => [d.data, ...prev]);
-        setFavNames(prev => { const n = new Set(prev); n.add(name); return n; });
-      }
+      const newFav = {
+        id: 'fav_' + Date.now(),
+        placeName: name,
+        city: place.city || '',
+        category: place.category || '',
+        rating: place.rating || 0,
+        photo: place.photos?.[0] || '',
+        savedAt: new Date().toISOString(),
+      };
+      const updated = [newFav, ...favorites];
+      localStorage.setItem('favorites', JSON.stringify(updated));
+      setFavorites(updated);
+      setFavNames(prev => { const n = new Set(prev); n.add(name); return n; });
     }
   };
 
@@ -89,21 +84,22 @@ export default function ExplorePage() {
         setFetchingLocation(false);
       },
       err => {
-        // GPS unavailable — immediately fallback to KL default so user always sees places
-        console.log('GPS unavailable, using default KL location');
+        console.log('GPS unavailable, using default location');
         setUserLoc({ lat: 3.139, lng: 101.6869 });
+        setGpsDenied(true);
         setFetchingLocation(false);
       },
-      { enableHighAccuracy: true, timeout: 20000, maximumAge: 30000 }
+      { enableHighAccuracy: true, timeout: 45000, maximumAge: 0 }
     );
 
-    // Also set a safety timeout — if still no location after 10s, force KL default
+    // Safety timeout — if no location after 15s, fallback to KL but show warning
     const t = setTimeout(() => {
       if (!userLoc) {
         setUserLoc({ lat: 3.139, lng: 101.6869 });
+        setGpsDenied(true);
         setFetchingLocation(false);
       }
-    }, 10000);
+    }, 15000);
 
     return () => { navigator.geolocation.clearWatch(watchId); clearTimeout(t); };
   }, []);
@@ -126,7 +122,7 @@ export default function ExplorePage() {
     const pid = p.id || p.place_id;
     if (pid && !pid.startsWith('fb') && !pid.startsWith('citydb') && !pid.startsWith('mem')) {
       try {
-        const r = await fetch(`${API}/places/details/${pid}`);
+        const r = await fetch(`${API}/places/${pid}`);
         const d = await r.json();
         setDetailPlace(d.data || p);
       } catch { setDetailPlace(p); }
@@ -199,7 +195,20 @@ export default function ExplorePage() {
               <Crosshair className="absolute inset-0 m-auto h-5 w-5 text-[#3B82F6]" />
             </div>
             <p className="mt-4 text-[15px] font-semibold text-[#171717]">Finding your location</p>
-            <p className="text-[13px] text-[#6F6F6F] mt-1">This may take a few seconds...</p>
+            <p className="text-[13px] text-[#6F6F6F] mt-1">Allow location access for accurate results...</p>
+          </div>
+        ) : gpsDenied && !userLoc ? (
+          <div className="flex flex-col items-center justify-center py-10 px-5">
+            <span className="text-5xl mb-3">📍</span>
+            <p className="text-[15px] font-extrabold text-[#171717]">Location Not Detected</p>
+            <p className="text-[13px] text-[#6F6F6F] mt-1 text-center">GPS may not work on desktop PCs. Type your city instead:</p>
+            <form onSubmit={async (e) => { e.preventDefault(); const city = (e.target as any).city.value; if (!city) return; setFetchingLocation(true); setGpsDenied(false); try { const r = await fetch(`https://maps.googleapis.com/maps/api/geocode/json?address=${encodeURIComponent(city + ', Malaysia')}&key=${process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY}`); const j = await r.json(); if (j.results?.[0]?.geometry?.location) { setUserLoc(j.results[0].geometry.location); setFetchingLocation(false); } else { setFetchingLocation(false); setGpsDenied(true); } } catch { setFetchingLocation(false); setGpsDenied(true); } }} className="w-full max-w-[280px] mt-4">
+              <div className="flex gap-2">
+                <input name="city" placeholder="Penang, Ipoh, JB, KK..." className="flex-1 rounded-xl border-2 border-[#3B82F6] bg-white py-3.5 px-4 text-[15px] font-semibold text-[#0E0E0E] placeholder:text-gray-300 outline-none" autoComplete="off" autoFocus />
+                <button type="submit" className="px-5 py-3.5 rounded-xl bg-[#3B82F6] text-white text-[14px] font-extrabold hover:bg-blue-600">Go</button>
+              </div>
+            </form>
+            <button onClick={() => { setGpsDenied(false); setFetchingLocation(true); setUserLoc(null); window.location.reload(); }} className="mt-4 text-[12px] text-[#3B82F6] font-bold underline">🔄 Try GPS Again</button>
           </div>
         ) : loading ? (
           <div className="text-center py-16">
@@ -214,8 +223,12 @@ export default function ExplorePage() {
           </div>
         ) : (
           <div>
-            <div className="px-4 py-2 text-[11px] font-bold text-[#9E9E9E] uppercase tracking-wider bg-[#FAFAF8] border-b border-[#E8EDE4]">
-              {places.length} places sorted by distance
+            <div className="px-4 py-2 bg-[#FAFAF8] border-b border-[#E8EDE4]">
+              {gpsDenied && <div className="text-[10px] font-bold text-amber-600 bg-amber-50 px-3 py-1.5 text-center">⚠️ Using default KL location. Allow GPS for accurate results.</div>}
+              <div className="flex items-center justify-between px-1">
+                <span className="text-[11px] font-bold text-[#9E9E9E] uppercase tracking-wider">{places.length} places · nearest first</span>
+                {userLoc && <span className="text-[10px] text-[#9E9E9E]">📍 {userLoc.lat.toFixed(4)}, {userLoc.lng.toFixed(4)}{gpsAccuracy ? ` (±${Math.round(gpsAccuracy)}m)` : ''}</span>}
+              </div>
             </div>
             {places.map((p, i) => (
               <div key={p.id || p.place_id || i} onClick={() => openDetail(p)}

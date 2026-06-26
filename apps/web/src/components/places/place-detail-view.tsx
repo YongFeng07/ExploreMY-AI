@@ -9,7 +9,7 @@ import {
 import { cn, formatDistance } from '@/lib/utils';
 import { toast } from 'sonner';
 
-const API = 'http://127.0.0.1:3001/api/v1';
+const API = '/api';
 
 interface Place {
   id?: string; place_id?: string; slug?: string; name?: string; placeName?: string;
@@ -65,7 +65,7 @@ export function PlaceDetailView({ place, onClose, onDirections, isFavorited, onT
   useEffect(() => {
     setDetailFull(null); setPhotoIdx(0);
     if (placeId) {
-      fetch(`${API}/places/details/${placeId}`).then(r => r.json()).then(j => setDetailFull(j.data)).catch(() => {});
+      fetch(`${API}/places/${placeId}`).then(r => r.json()).then(j => setDetailFull(j.data)).catch(() => {});
     }
   }, [placeId]);
 

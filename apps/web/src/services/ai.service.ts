@@ -1,4 +1,4 @@
-const API = 'http://localhost:3001/api/v1';
+const API = '/api/v1';
 export const aiService = {
   async planTrip(destination: string, duration: number, budget: number, interests: string[]) {
     const res = await fetch(`${API}/ai/plan-trip`, {

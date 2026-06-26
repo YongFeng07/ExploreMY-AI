@@ -1,8 +1,8 @@
 /**
  * Centralized API client — single source of truth for all backend communication.
- * Replaces 49+ hardcoded fetch('http://localhost:3001/...') calls across the app.
+ * Replaces 49+ hardcoded fetch('/...') calls across the app.
  */
-const API_BASE = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001';
+const API_BASE = process.env.NEXT_PUBLIC_API_URL || '';
 
 export function getApiUrl(path: string): string {
   const base = API_BASE.replace(/\/+$/, '');
@@ -64,7 +64,7 @@ export async function apiClient<T = any>(
       const refreshToken = typeof window !== 'undefined' ? localStorage.getItem('refreshToken') : null;
       if (refreshToken) {
         try {
-          const refreshRes = await fetch(getApiUrl('/api/v1/auth/refresh'), {
+          const refreshRes = await fetch(getApiUrl('/api/auth/refresh'), {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ refreshToken }),

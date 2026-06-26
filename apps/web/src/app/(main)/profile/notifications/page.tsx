@@ -6,7 +6,7 @@ import Link from 'next/link';
 export default function NotificationsPage() {
   const [notifs, setNotifs] = useState<any[]>([]);
   useEffect(() => {
-    fetch('http://localhost:3001/api/v1/admin/notifications')
+    fetch('/api/admin/notifications')
       .then(r => r.json()).then(d => setNotifs(d.data || []));
   }, []);
   return (

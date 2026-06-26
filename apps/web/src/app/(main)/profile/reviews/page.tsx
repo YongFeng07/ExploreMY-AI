@@ -3,40 +3,25 @@
 import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { Star, MapPin, Plus, X, Calendar, Navigation, Trash2 } from 'lucide-react';
-import { getAuthHeaders } from '@/stores/auth-store';
+const REVIEW_KEY = 'profile_reviews';
 
-const API = 'http://localhost:3001';
+function loadReviews() { try { return JSON.parse(localStorage.getItem(REVIEW_KEY) || '[]'); } catch { return []; } }
+function saveReviews(r: any[]) { localStorage.setItem(REVIEW_KEY, JSON.stringify(r)); }
 
 export default function ReviewsPage() {
-  const [items, setItems] = useState<any[]>([]);
-  const [loading, setLoading] = useState(true);
+  const [items, setItems] = useState<any[]>(loadReviews);
+  const [loading, setLoading] = useState(false);
   const [showForm, setShowForm] = useState(false);
   const [form, setForm] = useState({ placeName: '', city: '', rating: 5, text: '' });
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState('');
-  const token = typeof window !== 'undefined' ? localStorage.getItem('accessToken') : '';
-  const uid = typeof window !== 'undefined' ? localStorage.getItem('userId') || '' : '';
 
-  const load = () => {
-    setLoading(true);
-    fetch(`${API}/api/v1/auth/me/reviews?userId=${uid}`, { headers: getAuthHeaders() })
-      .then(r => r.json()).then(d => { setItems(d.data || []); setLoading(false); }).catch(() => setLoading(false));
-  };
-  useEffect(() => { load(); }, []);
-
-  const submit = async () => {
+  const submit = () => {
     if (!form.placeName.trim() || !form.text.trim()) { setError('Place name and review text are required'); return; }
-    setSubmitting(true); setError('');
-    try {
-      const r = await fetch(`${API}/api/v1/auth/me/reviews`, {
-        method: 'POST', headers: { ...getAuthHeaders(), 'Content-Type': 'application/json' },
-        body: JSON.stringify({ ...form, userId: uid }),
-      });
-      if (r.ok) {
-        setShowForm(false); setForm({ placeName: '', city: '', rating: 5, text: '' }); load();
-      } else { const d = await r.json(); setError(d.message || 'Failed to submit'); }
-    } catch { setError('Network error'); }
-    setSubmitting(false);
+    const newReview = { id: 'r_' + Date.now(), ...form, date: new Date().toISOString() };
+    const updated = [newReview, ...items];
+    saveReviews(updated); setItems(updated);
+    setShowForm(false); setForm({ placeName: '', city: '', rating: 5, text: '' });
   };
 
   const remove = async (id: string) => {

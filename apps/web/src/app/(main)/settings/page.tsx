@@ -9,7 +9,7 @@ export default function SettingsPage() {
   useEffect(() => {
     const token = localStorage.getItem('accessToken');
     if (!token) return;
-    fetch('http://localhost:3001/api/v1/auth/me', { headers: { Authorization: `Bearer ${token}` } })
+    fetch('/api/auth/me', { headers: { Authorization: `Bearer ${token}` } })
       .then(r => r.json()).then(d => {
         const role = d.data?.role || d.role;
         const email = d.data?.email || d.email;

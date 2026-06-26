@@ -58,7 +58,7 @@ export function useGooglePlaces() {
     if (!service) {
       // Fallback: use backend API
       const cat = category ? `&category=${category}` : '';
-      fetch(`http://127.0.0.1:3001/api/v1/places/nearby?lat=${lat}&lng=${lng}&radius=${radius}${cat}&limit=20`)
+      fetch(`http://127.0.0.1:3001/api/places/nearby?lat=${lat}&lng=${lng}&radius=${radius}${cat}&limit=20`)
         .then(r => r.json()).then(j => {
           setResults(j.data ?? []);
           setLoading(false);
@@ -105,7 +105,7 @@ export function useGooglePlaces() {
           setResults(transformResults(res, lat, lng, radius));
         } else {
           // Fallback to backend
-          fetch(`http://127.0.0.1:3001/api/v1/places/nearby?lat=${lat}&lng=${lng}&radius=${radius}${category ? `&category=${category}` : ''}&limit=20`)
+          fetch(`http://127.0.0.1:3001/api/places/nearby?lat=${lat}&lng=${lng}&radius=${radius}${category ? `&category=${category}` : ''}&limit=20`)
             .then(r => r.json()).then(j => setResults(j.data ?? [])).catch(() => setResults([]));
         }
         setLoading(false);

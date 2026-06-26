@@ -3,18 +3,21 @@
 import { useState, useEffect, useRef } from 'react';
 import Link from 'next/link';
 import { Camera, Plus, Trash2, Upload, ArrowLeft, X, Image, Star, Loader2 } from 'lucide-react';
-import { getAuthHeaders } from '@/stores/auth-store';
+const ALBUM_KEY = 'profile_albums';
 
-const API = 'http://localhost:3001';
+function saveAlbums(a: any[]) { localStorage.setItem(ALBUM_KEY, JSON.stringify(a)); }
+function loadAlbums(): any[] { try { return JSON.parse(localStorage.getItem(ALBUM_KEY) || '[]'); } catch { return []; } }
 
-function imgUrl(url: string | null | undefined): string | null {
-  if (!url) return null;
-  if (url.startsWith('http')) return url;
-  return `${API}${url.startsWith('/') ? '' : '/'}${url}`;
+function toBase64(file: File): Promise<string> {
+  return new Promise((resolve) => {
+    const r = new FileReader();
+    r.onload = () => resolve(r.result as string);
+    r.readAsDataURL(file);
+  });
 }
 
 export default function AlbumsPage() {
-  const [items, setItems] = useState<any[]>([]);
+  const [items, setItems] = useState<any[]>(loadAlbums);
   const [selAlbum, setSelAlbum] = useState<any>(null);
   const [show, setShow] = useState(false);
   const [f, setF] = useState({ title: '', place: '', coverPhoto: '' });
@@ -25,86 +28,61 @@ export default function AlbumsPage() {
   const fileRef = useRef<HTMLInputElement>(null);
   const photoFileRef = useRef<HTMLInputElement>(null);
 
-  const uid = typeof window !== 'undefined' ? localStorage.getItem('userId') || '' : '';
+  const load = () => setItems(loadAlbums());
 
-  const load = () => {
-    fetch(`${API}/api/v1/auth/me/albums?userId=${uid}`, { headers: getAuthHeaders() })
-      .then(r => r.json()).then(d => { setItems(d.data || []); if (selAlbum) { const updated = (d.data || []).find((a: any) => a.id === selAlbum.id); if (updated) setSelAlbum(updated); } });
-  };
-  useEffect(() => { load(); }, []);
-
-  /* ── Upload cover photo for new album ── */
   const uploadCover = async (e?: React.ChangeEvent<HTMLInputElement>) => {
     const file = e?.target?.files?.[0] || fileRef.current?.files?.[0]; if (!file) return;
-    setUploading(true); setUploadMsg('');
-    const fd = new FormData(); fd.append('file', file); fd.append('userId', uid);
-    try {
-      const r = await fetch(`${API}/api/v1/auth/me/photos/upload?userId=${uid}`, { method: 'POST', headers: getAuthHeaders(), body: fd });
-      const d = await r.json();
-      if (d.data?.url) { setF({ ...f, coverPhoto: d.data.url }); setUploadMsg('✅ Cover uploaded'); setTimeout(() => setUploadMsg(''), 2000); }
-      else setUploadMsg('❌ ' + (d.error || d.message || 'Upload failed. Try logging in again.'));
-    } catch { setUploadMsg('❌ Network error'); }
+    setUploading(true);
+    const url = await toBase64(file);
+    setF({ ...f, coverPhoto: url });
+    setUploadMsg('Cover ready');
+    setTimeout(() => setUploadMsg(''), 2000);
     setUploading(false);
   };
 
-  /* ── Upload photo to existing album ── */
   const uploadPhotoToAlbum = async (e?: React.ChangeEvent<HTMLInputElement>) => {
     const file = e?.target?.files?.[0] || photoFileRef.current?.files?.[0];
     if (!file || !selAlbum) return;
-    if ((selAlbum.photos?.length || 0) >= 10) { setUploadMsg('Maximum 10 photos per album'); return; }
-    setUploadingPhoto(true); setUploadMsg('');
-    const fd = new FormData(); fd.append('file', file); fd.append('userId', uid);
-    try {
-      const r = await fetch(`${API}/api/v1/auth/me/photos/upload?userId=${uid}`, { method: 'POST', headers: getAuthHeaders(), body: fd });
-      const d = await r.json();
-      if (d.data?.url) {
-        await fetch(`${API}/api/v1/auth/me/albums/${selAlbum.id}/photos?userId=${uid}`, {
-          method: 'POST', headers: { ...getAuthHeaders(), 'Content-Type': 'application/json' },
-          body: JSON.stringify({ photoUrl: d.data.url }),
-        });
-        setUploadMsg('✅ Photo added!');
-        setTimeout(() => setUploadMsg(''), 2000);
-        load();
-        if (photoFileRef.current) photoFileRef.current.value = '';
-      } else {
-        setUploadMsg('❌ Upload failed: ' + (d.error || d.message || 'Unknown'));
-      }
-    } catch { setUploadMsg('❌ Network error. Try again.'); }
+    if ((selAlbum.photos?.length || 0) >= 10) { setUploadMsg('Max 10 photos'); return; }
+    setUploadingPhoto(true);
+    const url = await toBase64(file);
+    const updated = items.map(a => a.id === selAlbum.id ? { ...a, photos: [...(a.photos || []), url] } : a);
+    saveAlbums(updated);
+    setItems(updated);
+    setSelAlbum(updated.find(a => a.id === selAlbum.id));
+    setUploadMsg('Photo added!');
+    setTimeout(() => setUploadMsg(''), 2000);
     setUploadingPhoto(false);
+    if (photoFileRef.current) photoFileRef.current.value = '';
   };
 
-  /* ── Create album ── */
-  const add = async () => {
+  const add = () => {
     if (!f.title) return;
-    await fetch(`${API}/api/v1/auth/me/albums?userId=${uid}`, {
-      method: 'POST', headers: { ...getAuthHeaders(), 'Content-Type': 'application/json' },
-      body: JSON.stringify({...f, userId: uid}),
-    });
-    setF({ title: '', place: '', coverPhoto: '' }); setShow(false); load();
+    const album = { id: 'a_' + Date.now(), title: f.title, place: f.place, coverPhoto: f.coverPhoto, photos: [], date: new Date().toISOString().split('T')[0] };
+    const updated = [album, ...items];
+    saveAlbums(updated); setItems(updated);
+    setF({ title: '', place: '', coverPhoto: '' }); setShow(false);
   };
 
-  /* ── Delete album ── */
-  const remove = async (id: string) => {
-    await fetch(`${API}/api/v1/auth/me/albums/${id}`, { method: 'DELETE', headers: getAuthHeaders() });
+  const remove = (id: string) => {
+    const updated = items.filter(a => a.id !== id);
+    saveAlbums(updated); setItems(updated);
     if (selAlbum?.id === id) setSelAlbum(null);
-    load();
   };
 
-  /* ── Remove photo from album ── */
-  const removePhoto = async (idx: number) => {
+  const removePhoto = (idx: number) => {
     if (!selAlbum) return;
-    await fetch(`${API}/api/v1/auth/me/albums/${selAlbum.id}/photos/${idx}`, { method: 'DELETE', headers: getAuthHeaders() });
-    load();
+    const photos = selAlbum.photos.filter((_: any, i: number) => i !== idx);
+    const updated = items.map(a => a.id === selAlbum.id ? { ...a, photos } : a);
+    saveAlbums(updated); setItems(updated);
+    setSelAlbum(updated.find(a => a.id === selAlbum.id));
   };
 
-  /* ── Set album cover ── */
-  const setCover = async (url: string) => {
+  const setCover = (url: string) => {
     if (!selAlbum) return;
-    await fetch(`${API}/api/v1/auth/me/albums/${selAlbum.id}/cover`, {
-      method: 'PATCH', headers: { ...getAuthHeaders(), 'Content-Type': 'application/json' },
-      body: JSON.stringify({ photoUrl: url }),
-    });
-    load();
+    const updated = items.map(a => a.id === selAlbum.id ? { ...a, coverPhoto: url } : a);
+    saveAlbums(updated); setItems(updated);
+    setSelAlbum(updated.find(a => a.id === selAlbum.id));
   };
 
   /* ═══════════════════════════════════════════════════════════════════
@@ -112,7 +90,7 @@ export default function AlbumsPage() {
       ═══════════════════════════════════════════════════════════════════ */
   if (selAlbum) {
     const photos: string[] = selAlbum.photos || [];
-    const displayCover = imgUrl(selAlbum.coverPhoto) || (photos.length > 0 ? imgUrl(photos[0]) : null);
+    const displayCover = (selAlbum.coverPhoto) || (photos.length > 0 ? (photos[0]) : null);
 
     return (
       <div className="min-h-screen bg-[#FFFDF7]">
@@ -151,16 +129,16 @@ export default function AlbumsPage() {
             <div className="grid grid-cols-3 gap-2">
               {photos.map((p: string, i: number) => (
                 <div key={i} className="relative group">
-                  <img src={imgUrl(p)!} className="w-full aspect-square object-cover rounded-xl cursor-pointer hover:opacity-90 transition-opacity"
-                    onClick={() => setViewPhoto(imgUrl(p))} alt={`Photo ${i + 1}`}
+                  <img src={(p)!} className="w-full aspect-square object-cover rounded-xl cursor-pointer hover:opacity-90 transition-opacity"
+                    onClick={() => setViewPhoto((p))} alt={`Photo ${i + 1}`}
                     onError={e => { (e.target as HTMLImageElement).src = 'data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" width="200" height="200" fill="%23F5EDE3"><text x="50%" y="50%" dy=".3em" text-anchor="middle" font-size="40">📷</text></svg>'; }} />
                   {/* Cover badge */}
-                  {imgUrl(p) === imgUrl(selAlbum.coverPhoto) && (
+                  {(p) === (selAlbum.coverPhoto) && (
                     <div className="absolute top-2 left-2 bg-amber-500 text-white text-[9px] font-bold rounded-full px-2 py-0.5 flex items-center gap-0.5"><Star className="h-2.5 w-2.5" fill="currentColor" /> Cover</div>
                   )}
                   {/* Actions */}
                   <div className="absolute top-2 right-2 flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
-                    {imgUrl(p) !== imgUrl(selAlbum.coverPhoto) && (
+                    {(p) !== (selAlbum.coverPhoto) && (
                       <button onClick={() => setCover(p)} className="p-1.5 bg-white/90 rounded-lg hover:bg-white" title="Set as cover"><Star className="h-3 w-3 text-amber-500" /></button>
                     )}
                     <button onClick={() => removePhoto(i)} className="p-1.5 bg-white/90 rounded-lg hover:bg-red-50" title="Remove"><Trash2 className="h-3 w-3 text-red-400" /></button>
@@ -218,7 +196,7 @@ export default function AlbumsPage() {
               {uploading ? 'Uploading...' : 'Select Cover Photo'}
               <input type="file" accept="image/jpeg,image/png,image/webp" className="hidden" onChange={uploadCover} />
             </label>
-            {f.coverPhoto && <img src={imgUrl(f.coverPhoto)!} className="w-full h-32 object-cover rounded-xl" alt="" />}
+            {f.coverPhoto && <img src={(f.coverPhoto)!} className="w-full h-32 object-cover rounded-xl" alt="" />}
             {uploadMsg && <p className={`text-[13px] font-semibold ${uploadMsg.startsWith('✅') ? 'text-green-600' : 'text-red-500'}`}>{uploadMsg}</p>}
             <button onClick={add} className="w-full py-2.5 rounded-xl bg-[#C4956A] text-white text-[13px] font-extrabold hover:bg-[#B8860B] transition-colors">Create Album</button>
           </div>
@@ -239,7 +217,7 @@ export default function AlbumsPage() {
             className="bg-white rounded-2xl border border-[#E8D5C4]/70 shadow-sm overflow-hidden group cursor-pointer hover:shadow-md hover:border-amber-200 transition-all active:scale-[0.98]">
             <div className="relative h-36 bg-[#F5EDE3]">
               {item.coverPhoto ? (
-                <img src={imgUrl(item.coverPhoto)!} className="w-full h-full object-cover" alt=""
+                <img src={(item.coverPhoto)!} className="w-full h-full object-cover" alt=""
                   onError={e => { (e.target as HTMLImageElement).style.display = 'none'; }} />
               ) : (
                 <div className="w-full h-full flex items-center justify-center text-3xl">🖼️</div>

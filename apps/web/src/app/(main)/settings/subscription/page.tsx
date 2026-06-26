@@ -5,7 +5,7 @@ import { Check } from 'lucide-react';
 
 export default function SubscriptionPage() {
   const [tiers, setTiers] = useState<any>({});
-  useEffect(() => { fetch('http://localhost:3001/api/v1/weekend-planner/pricing').then(r => r.json()).then(d => setTiers(d.data || {})); }, []);
+  useEffect(() => { fetch('/api/weekend-planner/pricing').then(r => r.json()).then(d => setTiers(d.data || {})); }, []);
 
   return (
     <div className="min-h-dvh bg-[#FAFAF8] px-5 pt-16 pb-24">

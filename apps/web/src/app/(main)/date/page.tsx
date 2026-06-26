@@ -71,7 +71,7 @@ export default function DatingPlannerPage() {
     setCity(val);
     if (val.length >= 2) {
       // Search Malaysian locations via Places API
-      fetch(`http://localhost:3001/api/v1/places/search?q=${encodeURIComponent(val)}&lat=3.139&lng=101.6869&limit=8`)
+      fetch(`/api/places/search?q=${encodeURIComponent(val)}&lat=3.139&lng=101.6869&limit=8`)
         .then(r=>r.json()).then(d=>{
           const names = (d.data||[]).map((p:any)=>p.name).filter((n:string)=>n&&n.length>2);
           const unique = [...new Set([...MY_CITIES.filter(c=>c.toLowerCase().includes(val.toLowerCase())),...names])];
@@ -97,39 +97,38 @@ export default function DatingPlannerPage() {
   const [activityThumbs, setActivityThumbs] = useState<Record<string,string>>({});
   const [viewImages, setViewImages] = useState<string[] | null>(null);
 
-  // Auto-load photos for activity cards — Unsplash source API, then Google override
+  // Auto-load REAL Google photos for activity cards + full photo gallery
+  const [activityPhotos, setActivityPhotos] = useState<Record<string, string[]>>({});
+
   useEffect(() => {
     if (!plan?.activities?.length) return;
-    plan.activities.forEach((a: any, i: number) => {
-      // Use Unsplash source API — always returns a valid image for the query
-      const query = encodeURIComponent(`${a.placeName} ${a.category || 'restaurant'}`);
-      const fallback = `https://source.unsplash.com/200x200/?${query}&sig=${i}`;
-      setActivityThumbs(prev => ({ ...prev, [a.placeName]: fallback }));
-      // Try Google Places for real photo
-      (async () => {
-        try {
-          const q = encodeURIComponent(a.placeName + ' ' + (plan.city || 'Kuala Lumpur') + ' Malaysia');
-          const r = await fetch(`http://localhost:3001/api/v1/places/search?q=${q}&lat=3.139&lng=101.6869&limit=3`);
-          const d = await r.json();
-          // Find first place with real photos
-          for (const place of (d.data || [])) {
-            const photo = place.photos?.[0];
-            if (photo && photo.startsWith('http')) {
-              setActivityThumbs(prev => ({ ...prev, [a.placeName]: photo }));
-              break;
+    plan.activities.forEach((a: any) => {
+      const name = a.placeName;
+      // Fetch from Google Places Search to get real photos
+      fetch(`/api/places/search?q=${encodeURIComponent(name + ' ' + (plan.city || 'Kuala Lumpur'))}&lat=${a.lat||3.139}&lng=${a.lng||101.6869}&limit=1`)
+        .then(r => r.json())
+        .then(d => {
+          const place = d.data?.[0];
+          if (place) {
+            const photos = place.photos || [];
+            if (photos.length > 0) {
+              setActivityThumbs(prev => ({ ...prev, [name]: photos[0] }));
+              setActivityPhotos(prev => ({ ...prev, [name]: photos }));
             }
           }
-        } catch {}
-      })();
+        }).catch(() => {});
+      // Fallback
+      const fallback = `https://source.unsplash.com/600x400/?${encodeURIComponent(name + ' ' + (a.category || 'restaurant'))}`;
+      setActivityThumbs(prev => prev[name] ? prev : { ...prev, [name]: fallback });
     });
   }, [plan?.activities]);
 
   const generate = async () => {
     setLoading(true); setError(''); setPlan(null);
     const controller = new AbortController();
-    const timeout = setTimeout(() => controller.abort(), 25000);
+    const timeout = setTimeout(() => controller.abort(), 60000);
     try {
-      const res = await fetch('http://localhost:3001/api/v1/dating-planner/generate', {
+      const res = await fetch('/api/dating-planner/generate', {
         method:'POST', headers:{'Content-Type':'application/json'},
         body:JSON.stringify({city,budget,durationHours:duration,transportMode:transport,relationshipStage:stage,dateType,preferredTime,dateSelected,userId:localStorage.getItem('userId')||''}),
         signal: controller.signal,
@@ -387,14 +386,16 @@ export default function DatingPlannerPage() {
               <div className="flex-1 min-w-0">
                 <div className="flex items-center justify-between">
                   <p className="text-[13px] font-extrabold text-gray-800">{a.placeName}</p>
-                  <span className="text-[11px] font-bold text-pink-500">{a.timeSlot}</span>
+                  <span className="text-[11px] font-bold text-pink-500">{a.time || a.timeSlot}</span>
                 </div>
-                <p className="text-[10px] text-gray-500">{a.category} · {a.durationMinutes}min · RM {a.estimatedCost}</p>
-                <p className="text-[11px] text-gray-600 mt-1 line-clamp-2">{a.description}</p>
+                <p className="text-[10px] text-gray-500">{a.category || a.activityType} · {a.duration || a.durationMinutes} · RM {(a.cost || a.estimatedCost) || 0}</p>
+                <p className="text-[11px] text-gray-600 mt-1 line-clamp-3">{a.description}</p>
+                {a.tip && <p className="text-[10px] text-pink-500 bg-pink-50 rounded-lg px-2 py-1 mt-1.5 italic">💡 {a.tip}</p>}
+                {a.dressCode && <p className="text-[9px] text-gray-400 mt-1">👔 {a.dressCode}{a.reservationNeeded ? ' · 📞 Reservation recommended' : ''}</p>}
                 <div className="flex gap-1.5 mt-2 flex-wrap">
-                  {a.isPhotoSpot&&<span className="text-[8px] font-bold bg-sky-50 text-sky-600 rounded-full px-2 py-0.5">📸 Photo</span>}
-                  {a.isIndoor&&<span className="text-[8px] font-bold bg-indigo-50 text-indigo-600 rounded-full px-2 py-0.5">🏠 Indoor</span>}
-                  <span className="text-[8px] font-bold bg-amber-50 text-amber-600 rounded-full px-2 py-0.5">⭐ {a.rating}</span>
+                  {a.isHighlight && <span className="text-[8px] font-bold bg-pink-50 text-pink-600 rounded-full px-2 py-0.5">✨ Highlight</span>}
+                  {a.category && <span className="text-[8px] font-bold bg-amber-50 text-amber-600 rounded-full px-2 py-0.5">{a.category}</span>}
+                  <span className="text-[8px] font-bold bg-emerald-50 text-emerald-600 rounded-full px-2 py-0.5">RM {(a.cost || a.estimatedCost) || 0}</span>
                 </div>
               </div>
               <ChevronRight className="h-4 w-4 text-gray-300 self-center flex-shrink-0" />
@@ -402,19 +403,18 @@ export default function DatingPlannerPage() {
           ))}
           {plan.giftSuggestions?.length>0 && (
             <div className="bg-white rounded-xl p-4 border border-pink-100 shadow-sm mt-4">
-              <p className="text-[10px] font-bold text-pink-500 uppercase tracking-wider mb-3">🎁 Suggested Gifts</p>
+              <p className="text-[10px] font-bold text-pink-500 uppercase tracking-wider mb-3">🎁 Perfect Gifts for This Date</p>
               <div className="grid grid-cols-2 gap-2">
                 {plan.giftSuggestions.map((g:any,i:number)=>(
-                  <div key={i} onClick={()=>setSelGift(g)} className="bg-pink-50/50 rounded-xl overflow-hidden border border-pink-100 hover:shadow-md transition-shadow cursor-pointer active:scale-[0.98]">
-                    <img src={g.photo || `https://images.unsplash.com/photo-${1549000000 + (g.name?.length||5)*7777}?w=400&h=300&fit=crop`}
-                      className="w-full h-24 object-cover" alt={g.name}
-                      onError={(e)=>{(e.target as HTMLImageElement).style.display='none';(e.target as HTMLImageElement).parentElement!.innerHTML='<div class=\"w-full h-24 bg-pink-100 flex items-center justify-center text-3xl\">🎁</div>'}} />
-                    <div className="p-2.5">
-                      <p className="text-[11px] font-extrabold text-gray-800 leading-tight">{g.name}</p>
-                      <p className="text-[9px] text-gray-400 mt-0.5 line-clamp-2">{g.reasoning}</p>
-                      <p className="text-[13px] font-extrabold text-pink-500 mt-1.5">RM {g.cost}</p>
-                      <p className="text-[8px] text-pink-300 mt-1 font-medium">Tap for details →</p>
+                  <div key={i} className="bg-gradient-to-br from-pink-50 to-rose-50 rounded-xl p-3 border border-pink-100 hover:shadow-md transition-all">
+                    <div className="flex items-center gap-2 mb-1.5">
+                      <span className="text-2xl">{g.emoji || '🎁'}</span>
+                      <div>
+                        <p className="text-[12px] font-extrabold text-gray-800 leading-tight">{g.name}</p>
+                        <p className="text-[14px] font-extrabold text-pink-500">RM {g.cost}</p>
+                      </div>
                     </div>
+                    <p className="text-[10px] text-gray-500 leading-relaxed">💡 {g.reason || g.reasoning || 'A thoughtful gift for this special date'}</p>
                   </div>
                 ))}
               </div>
@@ -424,7 +424,11 @@ export default function DatingPlannerPage() {
             <div className="bg-white rounded-xl p-4 border border-sky-100 shadow-sm">
               <p className="text-[10px] font-bold text-sky-500 uppercase tracking-wider mb-2">📸 Best Photo Spots · Golden Hour {plan.goldenHourTiming}</p>
               {plan.bestPhotoSpots.map((s:any,i:number)=>(
-                <div key={i} className="flex items-center gap-2 py-1.5"><Camera className="h-3 w-3 text-sky-400"/><span className="text-[11px] font-medium text-gray-700">{s.name}</span><span className="text-[9px] text-gray-400 ml-auto">{s.time}</span></div>
+                <div key={i} className="flex items-center gap-3 py-2 px-3 bg-sky-50/50 rounded-xl mb-1.5">
+                  <span className="text-lg">{['📸','🤳','🏙️','🌅','🎨','🏛️'][i%6]}</span>
+                  <span className="text-[12px] font-semibold text-gray-700">{typeof s === 'string' ? s : s.name}</span>
+                  {s.time && <span className="text-[10px] text-gray-400 ml-auto">{s.time}</span>}
+                </div>
               ))}
             </div>
           )}
@@ -553,7 +557,7 @@ export default function DatingPlannerPage() {
               <div>
                 <span className="text-[48px]">🌤️</span>
                 <p className="text-[22px] font-extrabold mt-1">{plan.city || 'Your city'}</p>
-                <p className="text-[13px] text-white/70">Partly Cloudy · 26-32°C · 30% rain</p>
+                <p className="text-[13px] text-white/70">{plan.weatherConditions || 'Partly Cloudy · 26-32°C'}</p>
               </div>
               <div className="text-right text-[13px] space-y-1">
                 {[['Morning','🌅','28°C','20% rain'],['Afternoon','☀️','32°C','10% rain'],['Evening','🌤️','29°C','35% rain'],['Night','🌙','26°C','40% rain']].map(([time,icon,temp,rain]) => (
@@ -840,14 +844,14 @@ export default function DatingPlannerPage() {
           (async () => {
             try {
               const q = encodeURIComponent(selActivity.placeName + ' ' + (plan?.city || 'Kuala Lumpur'));
-              const sr = await fetch(`http://localhost:3001/api/v1/places/search?q=${q}&lat=3.139&lng=101.6869&limit=3`);
+              const sr = await fetch(`/api/places/search?q=${q}&lat=3.139&lng=101.6869&limit=3`);
               const sd = await sr.json();
               let photos: string[] = [];
               let detail: any = null;
               for (const place of (sd.data || [])) {
                 const pid = place.id || place.place_id;
                 if (pid && !pid.startsWith('fb') && !pid.startsWith('citydb') && !pid.startsWith('mem')) {
-                  const dr = await fetch(`http://localhost:3001/api/v1/places/details/${pid}`);
+                  const dr = await fetch(`/api/places/${pid}`);
                   const dd = await dr.json();
                   if (dd.data) { detail = dd.data; photos = dd.data.photos || []; if (photos.length >= 5) break; }
                 } else if (place.photos?.length > photos.length) { photos = place.photos; }
@@ -1121,23 +1125,10 @@ export default function DatingPlannerPage() {
             const token = localStorage.getItem('accessToken');
             const uid = localStorage.getItem('userId') || '';
             if (!plan) return;
-            try {
-              const today = new Date().toISOString().split('T')[0];
-              const headers: any = { 'Content-Type': 'application/json' };
-              if (token) headers['Authorization'] = `Bearer ${token}`;
-              const r = await fetch('http://localhost:3001/api/v1/auth/me/trips?userId=' + uid, {
-                method: 'POST', headers,
-                body: JSON.stringify({
-                  userId: uid, title: plan.title, destination: plan.city, days: 1,
-                  totalCost: plan.totalCost, startDate: today, endDate: today,
-                  planDays: [{ dayNumber: 1, theme: plan.dateType || 'Date', stops: plan.activities || [], date: today }],
-                  totalStops: (plan.activities || []).length, transportMode: plan.transportMode || 'DRIVING',
-                  groupType: 'COUPLE', walletType: 'COUPLE', fullPlan: plan,
-                }),
-              });
-              if (r.ok) { toast.success('✅ Date saved! View in My Trips'); }
-              else { const d = await r.json().catch(()=>({})); toast.error('❌ ' + ((d as any).message || 'Save failed')); }
-            } catch { toast.error('❌ Network error - check your connection'); }
+            const trips = JSON.parse(localStorage.getItem('saved_trips') || '[]');
+            trips.unshift({ title: plan.title, destination: plan.city, type: 'date', totalCost: plan.totalCost, activities: plan.activities, savedAt: new Date().toISOString() });
+            localStorage.setItem('saved_trips', JSON.stringify(trips.slice(0, 50)));
+            toast.success('Date plan saved!');
           }} className="flex-1 py-3.5 rounded-2xl bg-white border-2 border-pink-200 text-pink-500 text-sm font-extrabold">💾 Save Date</button>
         </div>
       </div>

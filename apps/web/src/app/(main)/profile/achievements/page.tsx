@@ -6,7 +6,7 @@ import Link from 'next/link';
 import { motion } from 'framer-motion';
 import { ArrowLeft, Trophy, Star, MapPin, Camera, BookOpen, Heart, Wallet, Check } from 'lucide-react';
 
-const API = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001';
+const API = process.env.NEXT_PUBLIC_API_URL || '';
 
 const CATEGORY_META: Record<string, { icon: any; label: string; color: string; bg: string }> = {
   trips:     { icon: MapPin, label: 'Trips', color: '#C4956A', bg: '#FDF0E0' },
@@ -28,8 +28,8 @@ export default function AchievementsPage() {
   const [activeCategory, setActiveCategory] = useState<string>('all');
 
   useEffect(() => {
-    const token = localStorage.getItem('accessToken');
-    const uid = localStorage.getItem('userId');
+    const token = '';
+    const uid = '';
     const headers: any = {};
     if (token) headers['Authorization'] = `Bearer ${token}`;
     const qs = uid ? `?userId=${uid}` : '';

@@ -4,18 +4,33 @@ import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { Compass, Search, Sparkles, Map, User, Wallet, LogIn } from 'lucide-react';
 import { cn } from '@/lib/utils';
-import { useAuth } from '@/stores/auth-store';
 
 export function BottomNav() {
   const pathname = usePathname();
-  const { isAuthenticated } = useAuth();
   const [mounted, setMounted] = useState(false);
-  useEffect(() => { setMounted(true); }, []);
+  const [isLoggedIn, setIsLoggedIn] = useState(false);
 
-  // Use neutral "You" during SSR/hydration to avoid mismatch
+  useEffect(() => {
+    // Check Clerk session from the global Clerk object
+    const timer = setInterval(() => {
+      const w = window as any;
+      if (w.Clerk) {
+        setIsLoggedIn(!!w.Clerk.user);
+        setMounted(true);
+        clearInterval(timer);
+      }
+    }, 200);
+    // Timeout after 3 seconds
+    const fallback = setTimeout(() => {
+      clearInterval(timer);
+      setMounted(true);
+    }, 3000);
+    return () => { clearInterval(timer); clearTimeout(fallback); };
+  }, []);
+
   const lastItem = !mounted
     ? { href: '/profile', label: 'You', icon: User } as const
-    : isAuthenticated
+    : isLoggedIn
       ? { href: '/profile', label: 'You', icon: User } as const
       : { href: '/login', label: 'Sign In', icon: LogIn } as const;
 

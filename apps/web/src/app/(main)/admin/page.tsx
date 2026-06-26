@@ -4,7 +4,7 @@ import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { Shield, Bell, Search, Send, Trash2, Users, X, User, MapPin, Camera, Star, TrendingUp } from 'lucide-react';
 
-const API = 'http://localhost:3001';
+const API = '';
 
 export default function AdminPage() {
   const [notifs, setNotifs] = useState<any[]>([]);
@@ -21,31 +21,31 @@ export default function AdminPage() {
   if (token) headers['Authorization'] = `Bearer ${token}`;
 
   const loadAll = () => {
-    fetch(`${API}/api/v1/admin/notifications`).then(r => r.json()).then(d => setNotifs(d.data || []));
-    fetch(`${API}/api/v1/admin/users/all`, { headers }).then(r => r.json()).then(d => setAllUsers(d.data || [])).catch(() => {});
+    fetch(`${API}/api/admin/notifications`).then(r => r.json()).then(d => setNotifs(d.data || []));
+    fetch(`${API}/api/admin/users/all`, { headers }).then(r => r.json()).then(d => setAllUsers(d.data || [])).catch(() => {});
   };
   useEffect(() => { loadAll(); }, []);
 
   const searchUsers = (q: string) => {
     if (!q) { setSearchResults([]); return; }
-    fetch(`${API}/api/v1/admin/users?q=${encodeURIComponent(q)}`, { headers }).then(r => r.json()).then(d => setSearchResults(d.data || [])).catch(() => {});
+    fetch(`${API}/api/admin/users?q=${encodeURIComponent(q)}`, { headers }).then(r => r.json()).then(d => setSearchResults(d.data || [])).catch(() => {});
   };
 
   const sendNotif = async () => {
     if (!form.title || !form.message) return;
     const targetEmail = selectedUser ? selectedUser.email : 'all';
-    await fetch(`${API}/api/v1/admin/notifications`, { method: 'POST', headers, body: JSON.stringify({ ...form, targetEmail }) });
+    await fetch(`${API}/api/admin/notifications`, { method: 'POST', headers, body: JSON.stringify({ ...form, targetEmail }) });
     setForm({ title: '', message: '', type: 'system', targetEmail: 'all' }); setSelectedUser(null);
     loadAll(); setMsg('✅ Sent!'); setTimeout(() => setMsg(''), 2000);
   };
 
   const deleteNotif = async (id: string) => {
-    await fetch(`${API}/api/v1/admin/notifications/${id}`, { method: 'DELETE', headers }); loadAll();
+    await fetch(`${API}/api/admin/notifications/${id}`, { method: 'DELETE', headers }); loadAll();
   };
 
   const deleteUser = async (userId: string) => {
     if (!confirm(`Delete user ${userId}? This cannot be undone.`)) return;
-    await fetch(`${API}/api/v1/admin/users/${userId}`, { method: 'DELETE', headers });
+    await fetch(`${API}/api/admin/users/${userId}`, { method: 'DELETE', headers });
     setDetailUser(null); loadAll();
   };
 
