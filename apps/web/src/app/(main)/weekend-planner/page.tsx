@@ -1267,12 +1267,23 @@ export default function Page() {
   const generate = async () => {
     if (!dest) return; setLoading(true); setError(''); setPlan(null);
     const fb = custB ? parseInt(custB) : budget;
-    // Budget validation: min RM250/person/day, recommend RM400-800/person/day
     const diffDays = Math.ceil((new Date(eD).getTime() - new Date(sD).getTime()) / 86400000) + 1;
-    const minBudget = diffDays * size * 150;
-    const maxBudget = diffDays * size * 8000;
-    if (fb < minBudget) { setError(`Minimum budget RM ${minBudget.toLocaleString()} for ${size}p × ${diffDays} days. Increase budget or reduce days/people.`); setLoading(false); return; }
-    if (fb > maxBudget) { setError(`Maximum budget is RM ${maxBudget.toLocaleString()}.`); setLoading(false); return; }
+    // Dynamic budget limits: per-person daily rates scaled by trip length and group size
+    const perPersonRates: Record<number, { min: number; max: number }> = {
+      1: { min: 200, max: 1000 },
+      2: { min: 400, max: 2500 },
+      3: { min: 600, max: 4000 },
+      4: { min: 800, max: 5500 },
+      5: { min: 1200, max: 7000 },
+      6: { min: 1500, max: 8500 },
+      7: { min: 1800, max: 10000 },
+      8: { min: 2000, max: 12000 },
+    };
+    const rate = perPersonRates[Math.min(diffDays, 8)] || perPersonRates[8];
+    const minBudget = rate.min * size;
+    const maxBudget = rate.max * size;
+    if (fb < minBudget) { setError(`Minimum budget RM ${minBudget.toLocaleString()} for ${size}p × ${diffDays} day${diffDays>1?'s':''}. Increase budget, reduce days, or reduce people.`); setLoading(false); return; }
+    if (fb > maxBudget) { setError(`Maximum budget is RM ${maxBudget.toLocaleString()} for ${size}p × ${diffDays} day${diffDays>1?'s':''}. Please reduce.`); setLoading(false); return; }
     try {
       const res = await fetch('/api/weekend-planner/generate', {
         method: 'POST', headers: { 'Content-Type': 'application/json' },
@@ -1394,10 +1405,11 @@ export default function Page() {
 
         <div className="card-travel p-5">
           <label className="section-label">💰 Budget (MYR)</label>
-          <div className="flex gap-2 flex-wrap mb-3">
+          <div className="flex gap-2 flex-wrap mb-2">
             {BUDGETS.map(b => <button key={b} onClick={() => { setBudget(b); setCustB(''); }} className={cn('pill-travel', budget === b && !custB && 'pill-travel-active')}>RM {b}</button>)}
             <input value={custB} onChange={e => { setCustB(e.target.value); if (e.target.value) setBudget(0); }} placeholder="Custom" className="pill-travel text-sm w-24 text-center outline-none" />
           </div>
+          {(() => { const dd = Math.ceil((new Date(eD).getTime() - new Date(sD).getTime()) / 86400000) + 1; const pr: Record<number,{min:number;max:number}> = {1:{min:200,max:1000},2:{min:400,max:2500},3:{min:600,max:4000},4:{min:800,max:5500},5:{min:1200,max:7000},6:{min:1500,max:8500},7:{min:1800,max:10000},8:{min:2000,max:12000}}; const r = pr[Math.min(dd,8)] || pr[8]; return <p className="text-[10px] text-[#8B7355] mt-1">📍 {size}p × {dd}d: min <span className="font-bold text-[#7B5E3B]">RM {(r.min*size).toLocaleString()}</span> – max <span className="font-bold text-[#7B5E3B]">RM {(r.max*size).toLocaleString()}</span></p>; })()}
         </div>
 
         <div className="card-travel p-5">
@@ -1976,44 +1988,59 @@ export default function Page() {
             )}
             {plan.whereToStay?.length > 0 && (
               <div className="bg-white rounded-2xl p-5 border border-indigo-100 shadow-sm">
-                <p className="text-[10px] font-bold text-indigo-500 uppercase tracking-wider mb-3">🏨 Where to Stay in {plan.destination} ({plan.whereToStay.length} hotels)</p>
+                <p className="text-[10px] font-bold text-indigo-500 uppercase tracking-wider mb-3">🏨 Where to Stay in {plan.destination} <span className="text-[#A08970] font-normal normal-case">({plan.whereToStay.length} handpicked hotels)</span></p>
+                {/* Filter tabs */}
+                <div className="flex gap-1.5 mb-3">
+                  {['all','budget','mid','luxury'].map(f => (
+                    <button key={f} className={cn('text-[10px] font-bold px-3 py-1 rounded-full capitalize', f === 'all' ? 'bg-indigo-100 text-indigo-600' : 'text-[#8B7355] hover:bg-gray-100')}>{f === 'all' ? 'All' : f}</button>
+                  ))}
+                </div>
                 <div className="space-y-3">
                   {plan.whereToStay.map((h: any, i: number) => (
-                    <div key={i} className="bg-white rounded-xl border border-gray-200 shadow-sm overflow-hidden hover:shadow-md transition-shadow cursor-pointer" onClick={() => setSelHotel(h)}>
+                    <div key={i} className="bg-white rounded-xl border border-gray-200 shadow-sm overflow-hidden hover:shadow-lg hover:border-indigo-200 transition-all cursor-pointer group" onClick={() => setSelHotel(h)}>
                       <div className="flex">
-                        {/* Photo */}
-                        <div className="w-28 h-28 flex-shrink-0 cursor-pointer" onClick={() => { const p = stopPhotos[h.name]; setViewImages(p?.length ? p : [h.photoUrl]); }}>
+                        {/* Photo — Agoda style with tag overlay */}
+                        <div className="w-[120px] h-[140px] flex-shrink-0 relative overflow-hidden">
                           {h.photoUrl ? (
-                            <img src={h.photoUrl} className="w-full h-full object-cover" alt={h.name} />
+                            <img src={h.photoUrl} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" alt={h.name} />
                           ) : (
-                            <div className="w-full h-full bg-gradient-to-br from-indigo-100 to-purple-100 flex items-center justify-center text-3xl">
-                              {h.type === 'luxury' ? '🏩' : h.type === 'mid' ? '🏨' : '🏠'}
+                            <div className={cn("w-full h-full flex items-center justify-center text-4xl", h.type==='luxury'?'bg-gradient-to-br from-purple-200 to-indigo-200':h.type==='mid'?'bg-gradient-to-br from-blue-100 to-sky-100':'bg-gradient-to-br from-green-100 to-emerald-100')}>{h.type === 'luxury' ? '🏩' : h.type === 'mid' ? '🏨' : '🏠'}</div>
+                          )}
+                          {/* Badge overlay */}
+                          <div className="absolute top-2 left-2">
+                            <span className={cn("text-[8px] font-extrabold px-2 py-0.5 rounded-full text-white", h.type==='luxury'?'bg-purple-500':h.type==='mid'?'bg-blue-500':'bg-green-500')}>{h.type?.toUpperCase()}</span>
+                          </div>
+                          {h.starRating >= 4 && <span className="absolute top-2 right-2 bg-amber-400 text-white text-[8px] font-extrabold px-1.5 py-0.5 rounded">⭐ {h.starRating}</span>}
+                        </div>
+                        {/* Info */}
+                        <div className="flex-1 p-3 min-w-0 flex flex-col justify-between">
+                          <div>
+                            <div className="flex items-start justify-between gap-1">
+                              <p className="text-[14px] font-extrabold text-[#0E0E0E] leading-tight line-clamp-1">{h.name}</p>
+                            </div>
+                            {h.address && <p className="text-[10px] text-gray-400 mt-0.5 flex items-center gap-1"><MapPin className="h-2.5 w-2.5" />{h.address}</p>}
+                            <div className="flex items-center gap-2 mt-1">
+                              <span className="flex items-center gap-0.5 bg-amber-50 text-amber-700 rounded-md px-1.5 py-0.5 text-[11px] font-extrabold"><Star className="h-3 w-3 fill-amber-400 text-amber-400" /> {h.rating || '4.0'}</span>
+                              {h.reviewCount > 0 && <span className="text-[10px] text-gray-400">{h.reviewCount.toLocaleString()} reviews</span>}
+                              {h.starRating > 0 && <span className="text-[11px]">{'⭐'.repeat(Math.min(5, h.starRating||0))}</span>}
+                            </div>
+                          </div>
+                          <p className="text-[11px] text-[#6B7280] line-clamp-1 leading-relaxed mt-1">{h.description}</p>
+                          {Array.isArray(h.amenities) && h.amenities.length > 0 && (
+                            <div className="flex flex-wrap gap-1 mt-1.5">
+                              {h.amenities.slice(0, 4).map((a: string) => (
+                                <span key={a} className="text-[8px] font-medium bg-gray-100 text-gray-500 rounded-full px-2 py-0.5">{a}</span>
+                              ))}
+                              {h.amenities.length > 4 && <span className="text-[8px] text-gray-400">+{h.amenities.length - 4} more</span>}
                             </div>
                           )}
                         </div>
-                        {/* Info */}
-                        <div className="flex-1 p-3 min-w-0">
-                          <div className="flex items-start justify-between gap-1">
-                            <p className="text-[13px] font-extrabold text-[#0E0E0E] leading-tight truncate">{h.name}</p>
-                            <span className={cn("text-[10px] font-bold px-2 py-0.5 rounded-full flex-shrink-0", h.type==='luxury'?'bg-purple-100 text-purple-600':h.type==='mid'?'bg-blue-100 text-blue-600':'bg-green-100 text-green-600')}>{h.type}</span>
-                          </div>
-                          {/* Stars + Rating */}
-                          <div className="flex items-center gap-1.5 mt-1">
-                            {h.starRating > 0 && <span className="text-[11px]">{'⭐'.repeat(Math.min(5, h.starRating || 0))}</span>}
-                            {h.rating > 0 && (
-                              <span className="text-[11px] font-bold bg-amber-50 text-amber-700 rounded px-1.5 py-0.5">{h.rating}</span>
-                            )}
-                          </div>
-                          <p className="text-[11px] text-[#6B7280] mt-1 line-clamp-2 leading-relaxed">{h.description}</p>
-                          {h.amenities && (
-                            <p className="text-[10px] text-gray-400 mt-1 truncate">{String(h.amenities).replace(/,/g, ' · ')}</p>
-                          )}
-                        </div>
-                        {/* Price */}
-                        <div className="flex-shrink-0 p-3 flex flex-col items-end justify-center border-l border-gray-100">
-                          <p className="text-[10px] text-gray-400">from</p>
-                          <p className="text-[16px] font-extrabold text-indigo-600">RM{h.pricePerNight}</p>
-                          <p className="text-[9px] text-gray-400">/night</p>
+                        {/* Price — Trip.com style right column */}
+                        <div className="flex-shrink-0 w-[90px] p-3 flex flex-col items-end justify-center border-l border-gray-100 bg-gray-50/50">
+                          <p className="text-[9px] text-gray-400">from</p>
+                          <p className="text-[20px] font-extrabold text-indigo-600 leading-none">RM{h.pricePerNight}</p>
+                          <p className="text-[9px] text-gray-400">per night</p>
+                          <p className="text-[9px] font-bold text-amber-600 mt-1">🔖 Top pick</p>
                         </div>
                       </div>
                     </div>
@@ -3044,44 +3071,78 @@ export default function Page() {
         );
       })()}
     
-      {/* 🏨 Hotel Detail Modal */}
+      {/* 🏨 Hotel Detail Modal — Agoda/Trip.com Professional Style */}
       {selHotel && (
         <div className="fixed inset-0 z-[9999] flex items-end bg-black/50 backdrop-blur-md" onClick={() => setSelHotel(null)}>
-          <div className="w-full max-h-[90vh] bg-white rounded-t-[24px] overflow-y-auto" onClick={e => e.stopPropagation()}>
-            <div className="sticky top-0 bg-white pt-3 pb-2 flex justify-center z-10"><div className="w-10 h-1 rounded-full bg-gray-300"/></div>
-            {/* Photo Gallery */}
-            <div className="relative h-56 bg-gray-100 cursor-pointer" onClick={() => { const p = stopPhotos[selHotel.name]; setViewImages(p?.length ? p : [selHotel.photoUrl]); }}>
-              {selHotel.photoUrl ? <img src={selHotel.photoUrl} className="w-full h-full object-cover" alt="" /> : <div className="w-full h-full flex items-center justify-center text-4xl bg-gradient-to-br from-indigo-100 to-purple-100">🏨</div>}
-              <span className="absolute bottom-2 right-2 bg-black/50 backdrop-blur rounded-full px-2 py-0.5 text-[10px] font-bold text-white">📷 {stopPhotos[selHotel.name]?.length || 0} photos</span>
+          <div className="w-full max-h-[92vh] bg-white rounded-t-[24px] overflow-y-auto" onClick={e => e.stopPropagation()}>
+            <div className="sticky top-0 bg-white pt-3 pb-2 flex justify-center z-20"><div className="w-10 h-1 rounded-full bg-gray-300"/></div>
+            {/* Photo Gallery — tap to expand */}
+            <div className="relative h-64 cursor-pointer" onClick={() => { const p = stopPhotos[selHotel.name]; setViewImages(p?.length ? p : [selHotel.photoUrl]); }}>
+              {selHotel.photoUrl ? <img src={selHotel.photoUrl} className="w-full h-full object-cover" alt={selHotel.name} /> : (
+                <div className={cn("w-full h-full flex items-center justify-center text-6xl", selHotel.type==='luxury'?'bg-gradient-to-br from-purple-300 to-indigo-300':selHotel.type==='mid'?'bg-gradient-to-br from-blue-200 to-sky-200':'bg-gradient-to-br from-green-200 to-emerald-200')}>🏨</div>
+              )}
+              <div className="absolute inset-x-0 bottom-0 h-20 bg-gradient-to-t from-black/60 to-transparent"/>
+              <span className="absolute bottom-3 right-3 bg-white/90 backdrop-blur rounded-full px-3 py-1 text-[11px] font-bold text-[#0E0E0E]">📷 {stopPhotos[selHotel.name]?.length || 'View'} photos</span>
+              <button onClick={e => { e.stopPropagation(); setSelHotel(null); }} className="absolute top-3 left-3 w-8 h-8 rounded-full bg-black/30 backdrop-blur flex items-center justify-center text-white"><X className="h-4 w-4" /></button>
             </div>
             <div className="p-5 space-y-4 pb-8">
+              {/* Header */}
               <div>
-                <div className="flex items-center gap-2 mb-1">
-                  <span className={cn("text-[10px] font-bold px-2 py-0.5 rounded-full", selHotel.type==='luxury'?'bg-purple-100 text-purple-600':selHotel.type==='mid'?'bg-blue-100 text-blue-600':'bg-green-100 text-green-600')}>{selHotel.type}</span>
-                  {selHotel.starRating > 0 && <span className="text-[12px]">{'⭐'.repeat(Math.min(5, selHotel.starRating||0))}</span>}
+                <div className="flex items-center gap-2 mb-1.5 flex-wrap">
+                  <span className={cn("text-[10px] font-extrabold px-2.5 py-1 rounded-full text-white uppercase tracking-wide", selHotel.type==='luxury'?'bg-purple-500':selHotel.type==='mid'?'bg-blue-500':'bg-green-500')}>{selHotel.type}</span>
+                  {selHotel.starRating >= 4 && <span className="text-[10px] font-bold bg-amber-100 text-amber-700 rounded-full px-2 py-0.5">⭐ {selHotel.starRating}-star</span>}
+                  {selHotel.rating > 0 && <span className="flex items-center gap-0.5 bg-amber-50 text-amber-700 rounded-lg px-2 py-0.5 text-[12px] font-extrabold"><Star className="h-3.5 w-3.5 fill-amber-400 text-amber-400"/> {selHotel.rating}</span>}
                 </div>
-                <h2 className="text-[22px] font-extrabold text-[#0E0E0E]">{selHotel.name}</h2>
-                {selHotel.rating > 0 && <div className="flex items-center gap-1 mt-1"><Star className="h-4 w-4 fill-amber-400 text-amber-400"/><span className="text-[14px] font-extrabold">{selHotel.rating}</span><span className="text-[12px] text-gray-400">/5</span></div>}
+                <h2 className="text-[24px] font-extrabold text-[#0E0E0E] leading-tight">{selHotel.name}</h2>
+                {selHotel.address && <p className="text-[12px] text-[#6B7280] flex items-center gap-1 mt-1"><MapPin className="h-3.5 w-3.5" />{selHotel.address}</p>}
+                {selHotel.reviewCount > 0 && <p className="text-[11px] text-gray-400 mt-0.5">{selHotel.reviewCount.toLocaleString()} verified reviews</p>}
               </div>
-              <div className="grid grid-cols-2 gap-3">
-                <div className="bg-indigo-50 rounded-xl p-3 text-center"><p className="text-[20px] font-extrabold text-indigo-600">RM{selHotel.pricePerNight}</p><p className="text-[10px] text-gray-500">per night</p></div>
-                <div className="bg-green-50 rounded-xl p-3 text-center"><p className="text-[20px] font-extrabold text-green-600">RM{Math.round(selHotel.pricePerNight*2)}</p><p className="text-[10px] text-gray-500">2 nights est.</p></div>
+              {/* Price Cards — Agoda style */}
+              <div className="grid grid-cols-3 gap-2">
+                <div className="bg-gradient-to-br from-indigo-50 to-purple-50 rounded-xl p-3 text-center border border-indigo-100">
+                  <p className="text-[24px] font-extrabold text-indigo-600 leading-none">RM{selHotel.pricePerNight}</p>
+                  <p className="text-[9px] text-gray-500 mt-0.5">per night</p>
+                </div>
+                <div className="bg-gradient-to-br from-green-50 to-emerald-50 rounded-xl p-3 text-center border border-green-100">
+                  <p className="text-[24px] font-extrabold text-green-600 leading-none">RM{Math.round(selHotel.pricePerNight*(plan.days?.length||2)-selHotel.pricePerNight)}</p>
+                  <p className="text-[9px] text-gray-500 mt-0.5">{(plan.days?.length||2)-1} nights total</p>
+                </div>
+                <div className="bg-gradient-to-br from-amber-50 to-orange-50 rounded-xl p-3 text-center border border-amber-100">
+                  <p className="text-[24px] font-extrabold text-amber-600 leading-none">RM{Math.round(selHotel.pricePerNight/size)}</p>
+                  <p className="text-[9px] text-gray-500 mt-0.5">per person</p>
+                </div>
               </div>
+              {/* Description — professional */}
               <div>
-                <p className="text-[10px] font-bold text-gray-400 uppercase tracking-wider mb-1">About</p>
-                <p className="text-[13px] text-[#6B7280] leading-relaxed">{selHotel.description || 'No description available'}</p>
+                <p className="text-[11px] font-bold text-gray-500 uppercase tracking-wider mb-2">📋 About This Hotel</p>
+                <p className="text-[14px] text-[#4A4A4A] leading-relaxed">{selHotel.description || 'No description available'}</p>
               </div>
+              {/* Amenities — icon grid */}
               {selHotel.amenities && (
                 <div>
-                  <p className="text-[10px] font-bold text-gray-400 uppercase tracking-wider mb-2">Amenities</p>
-                  <div className="flex flex-wrap gap-1.5">
-                    {String(selHotel.amenities).split(',').map((a: string) => (
-                      <span key={a} className="text-[10px] font-medium bg-gray-100 text-gray-600 rounded-full px-2.5 py-1">{a.trim()}</span>
-                    ))}
+                  <p className="text-[11px] font-bold text-gray-500 uppercase tracking-wider mb-2">✨ Amenities & Facilities</p>
+                  <div className="grid grid-cols-2 gap-1.5">
+                    {(Array.isArray(selHotel.amenities) ? selHotel.amenities : String(selHotel.amenities).split(',').map((s:string)=>s.trim())).map((a: string) => {
+                      const icon: Record<string,string> = {Pool:'🏊',WiFi:'📶',Spa:'💆',Gym:'🏋️',Beach:'🏖️',Parking:'🅿️',Restaurant:'🍽️',Breakfast:'🥐','Room Service':'🛎️',Bar:'🍸',AC:'❄️',Butler:'🤵',Chauffeur:'🚘',Villa:'🏡',Garden:'🌿',Sauna:'🧖','Fine Dining':'🍷','Common Area':'🛋️','Business Center':'💼',Laundry:'🧺',Reception:'🕐',Elevator:'🛗',Kitchen:'🍳',Balcony:'🌅','Hot Tub':'🛁',Airport:'✈️'};
+                      return <span key={a} className="text-[11px] font-medium bg-gray-50 text-gray-700 rounded-lg px-2.5 py-2 flex items-center gap-1.5"><span>{icon[a] || '✅'}</span>{a}</span>;
+                    })}
                   </div>
                 </div>
               )}
-              <button onClick={() => setSelHotel(null)} className="w-full py-3 rounded-xl bg-gray-100 text-gray-600 text-sm font-bold">Close</button>
+              {/* Quick Stats */}
+              <div className="grid grid-cols-3 gap-2">
+                {selHotel.starRating > 0 && <div className="text-center bg-amber-50 rounded-xl py-2"><p className="text-[10px] text-gray-500">Star Rating</p><p className="text-[13px] font-extrabold text-amber-600">{'⭐'.repeat(Math.min(5,selHotel.starRating))}</p></div>}
+                {selHotel.rating > 0 && <div className="text-center bg-green-50 rounded-xl py-2"><p className="text-[10px] text-gray-500">Guest Rating</p><p className="text-[13px] font-extrabold text-green-600">{selHotel.rating}/5</p></div>}
+                <div className="text-center bg-blue-50 rounded-xl py-2"><p className="text-[10px] text-gray-500">Value</p><p className="text-[13px] font-extrabold text-blue-600">{selHotel.pricePerNight < 200 ? '💰 Great' : selHotel.pricePerNight < 500 ? '⭐ Good' : '👑 Premium'}</p></div>
+              </div>
+              {/* Book Now — Agoda/Trip.com CTAs */}
+              <div className="space-y-2">
+                <a href={`https://www.agoda.com/search?q=${encodeURIComponent(selHotel.name)}+${encodeURIComponent(plan.destination)}`} target="_blank"
+                  className="w-full py-3.5 rounded-xl bg-gradient-to-r from-indigo-500 to-purple-600 text-white text-[14px] font-extrabold flex items-center justify-center gap-2 shadow-lg shadow-indigo-200">🏨 Book on Agoda</a>
+                <a href={`https://www.trip.com/hotels/list?q=${encodeURIComponent(selHotel.name)}+${encodeURIComponent(plan.destination)}`} target="_blank"
+                  className="w-full py-3.5 rounded-xl bg-white border-2 border-indigo-200 text-indigo-600 text-[14px] font-extrabold flex items-center justify-center gap-2">✈️ Book on Trip.com</a>
+                <button onClick={() => setSelHotel(null)} className="w-full py-3 rounded-xl bg-gray-100 text-gray-500 text-sm font-bold">Close</button>
+              </div>
             </div>
           </div>
         </div>
