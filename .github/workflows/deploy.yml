@@ -25,4 +25,4 @@ jobs:
 
       - name: Deploy to Vercel
         working-directory: apps/web
-        run: npx vercel --prod --token=${{ secrets.VERCEL_TOKEN }} --yes
+        run: npx vercel --prod --scope eddie-s-projects12 --token=${{ secrets.VERCEL_TOKEN }} --yes
