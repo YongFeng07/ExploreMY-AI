@@ -1,6 +1,0 @@
-{
-  "buildCommand": "cd apps/web && npx next build",
-  "installCommand": "cd apps/web && npm install --legacy-peer-deps",
-  "framework": "nextjs",
-  "outputDirectory": "apps/web/.next"
-}
