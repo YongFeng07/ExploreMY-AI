@@ -32,7 +32,10 @@ function AnimatedCount({ value, duration = 800 }: { value: number; duration?: nu
 }
 
 export default function CoupleWalletPage() {
-  const [goals, setGoals] = useState<any[]>(lw());
+  const [goals, setGoals] = useState<any[]>([]);
+  const [hydrated, setHydrated] = useState(false);
+
+  useEffect(() => { setGoals(lw()); setHydrated(true); }, []);
   const [selGoal, setSelGoal] = useState<any>(null);
   const [contributeAmount, setContributeAmount] = useState(50);
   const [customAmount, setCustomAmount] = useState('');

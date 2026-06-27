@@ -54,39 +54,57 @@ function AnimatedCount({ value, duration = 800 }: { value: number; duration?: nu
 }
 
 export default function CoupleDashboard() {
-  const [couple, setCouple] = useState(lc());
-  const [partner, setPartner] = useState<any>(couple.partner || null);
-  const [anniv, setAnniv] = useState<any>(couple.anniversary || null);
+  const [hydrated, setHydrated] = useState(false);
+  const [couple, setCouple] = useState<any>({});
+  const [partner, setPartner] = useState<any>(null);
+  const [anniv, setAnniv] = useState<any>(null);
   const [tab, setTab] = useState<'dashboard' | 'timeline' | 'gallery'>('dashboard');
   const [detailSheet, setDetailSheet] = useState<{ title: string; type: string; items: any[] } | null>(null);
   const [linkEmail, setLinkEmail] = useState('');
   const [msg, setMsg] = useState('');
   const [isNewCouple, setIsNewCouple] = useState(false);
 
-  // ─── Data Loading ───
-  const allSavedTrips = (() => { try { return JSON.parse(localStorage.getItem('saved_trips') || '[]'); } catch { return []; } })();
-  const savedTrips = allSavedTrips.filter((t: any) =>
-    t.groupType === 'COUPLE' || t.walletType === 'COUPLE' || t.type === 'date' ||
-    (t.fullPlan?.groupType === 'COUPLE') || (t.fullPlan?.walletType === 'COUPLE')
-  );
-  const coupleTimeline = couple.timeline || [];
-  const walletGoals = lw();
-  const journals = lj();
+  // ─── Data Loading (via useEffect to avoid SSR hydration mismatch) ───
+  const [savedTrips, setSavedTrips] = useState<any[]>([]);
+  const [timeline, setTimeline] = useState<any[]>([]);
+  const [gallery, setGallery] = useState<any[]>([]);
+  const [walletGoals, setWalletGoals] = useState<any[]>([]);
+  const [journals, setJournals] = useState<any[]>([]);
 
-  const allTimeline = [
-    ...coupleTimeline,
-    ...savedTrips.map((t: any) => ({
-      ...t, id: t.id || t.savedAt, title: t.title || 'Trip', date: t.savedAt || t.startDate,
-      shared: true, type: t.type || 'trip', category: 'trip', emoji: t.type === 'date' ? '💕' : '✈️',
-    })),
-    ...walletGoals.map((g: any) => ({
-      ...g, id: g.id, title: `🎯 Goal: ${g.title}`, date: g.createdAt, shared: true,
-      type: 'goal', category: 'goal', emoji: '💰',
-    })),
-  ].sort((a: any, b: any) => new Date(b.date || b.createdAt || 0).getTime() - new Date(a.date || a.createdAt || 0).getTime());
+  useEffect(() => {
+    const d = lc();
+    setCouple(d);
+    setPartner(d.partner || null);
+    setAnniv(d.anniversary || null);
+    setGallery(d.gallery || []);
 
-  const [timeline, setTimeline] = useState<any[]>(allTimeline);
-  const [gallery, setGallery] = useState<any[]>(couple.gallery || []);
+    const allSaved = (() => { try { return JSON.parse(localStorage.getItem('saved_trips') || '[]'); } catch { return []; } })();
+    const st = allSaved.filter((t: any) =>
+      t.groupType === 'COUPLE' || t.walletType === 'COUPLE' || t.type === 'date' ||
+      (t.fullPlan?.groupType === 'COUPLE') || (t.fullPlan?.walletType === 'COUPLE')
+    );
+    setSavedTrips(st);
+
+    const wg = lw();
+    setWalletGoals(wg);
+    const jn = lj();
+    setJournals(jn);
+
+    const tl = [
+      ...(d.timeline || []),
+      ...st.map((t: any) => ({
+        ...t, id: t.id || t.savedAt, title: t.title || 'Trip', date: t.savedAt || t.startDate,
+        shared: true, type: t.type || 'trip', category: 'trip', emoji: t.type === 'date' ? '💕' : '✈️',
+      })),
+      ...wg.map((g: any) => ({
+        ...g, id: g.id, title: `🎯 Goal: ${g.title}`, date: g.createdAt, shared: true,
+        type: 'goal', category: 'goal', emoji: '💰',
+      })),
+    ].sort((a: any, b: any) => new Date(b.date || b.createdAt || 0).getTime() - new Date(a.date || a.createdAt || 0).getTime());
+    setTimeline(tl);
+
+    setHydrated(true);
+  }, []);
 
   // ─── Compatibility Engine ───
   const uniqueCities = new Set(savedTrips.map((t: any) => t.destination?.toLowerCase()).filter(Boolean));
