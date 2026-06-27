@@ -1001,8 +1001,14 @@ export default function Page() {
   const [tripDistance, setTripDistance] = useState<number | null>(null);
   const [aiTransport, setAiTransport] = useState<{mode:string;emoji:string;duration:string;cost:number}|null>(null);
   const today = new Date(); const tomorrow = new Date(); tomorrow.setDate(today.getDate() + 1);
-  const [sD, setSD] = useState(today.toISOString().split('T')[0]);
-  const [eD, setED] = useState(tomorrow.toISOString().split('T')[0]);
+  const [sD, setSD] = useState('');
+  const [eD, setED] = useState('');
+  // Set dates after mount to avoid hydration mismatch
+  useEffect(() => {
+    const t = new Date(); const tm = new Date(); tm.setDate(t.getDate() + 1);
+    setSD(t.toISOString().split('T')[0]);
+    setED(tm.toISOString().split('T')[0]);
+  }, []);
   const [budget, setBudget] = useState(800);
   const [custB, setCustB] = useState('');
   const [group, setGroup] = useState('COUPLE');
@@ -1488,7 +1494,7 @@ export default function Page() {
 
         {/* Tip */}
         <div className="mt-8 bg-white/60 backdrop-blur rounded-xl p-3 text-[11px] text-[#5C4A3A] italic border border-[#D4C4B0]/30">
-          💡 {['The best trips are discovered, not planned.','Malaysia has over 4,000 km of coastline to explore.','Every great adventure starts with a single step.','The journey is just as important as the destination.'][Math.floor(Math.random()*4)]}
+          💡 {['The best trips are discovered, not planned.','Malaysia has over 4,000 km of coastline to explore.','Every great adventure starts with a single step.','The journey is just as important as the destination.'][0]}
         </div>
       </div>
     </div>
@@ -2193,7 +2199,7 @@ export default function Page() {
                       <span className="text-3xl font-extrabold text-[#7B5E3B]">{matchPct}<span className="text-lg text-[#9CA3AF]">%</span></span>
                       <div className="flex-1 text-[11px] space-y-1">
                         {allDimensions.map(dim => {
-                          const v = catStyles.includes(dim) ? 85 + Math.round(Math.random() * 12) : 40 + Math.round(Math.random() * 30);
+                          const v = catStyles.includes(dim) ? 85 + (selStop.rating ? selStop.rating * 2 : 10) : 40 + (selStop.rating ? selStop.rating * 5 : 15);
                           const emoji = dim === 'FOODIE' ? '🍜' : dim === 'ADVENTURE' ? '🧗' : dim === 'PHOTOGRAPHY' ? '📸' : dim === 'NATURE' ? '🌿' : dim === 'NIGHTLIFE' ? '🌙' : dim === 'LUXURY' ? '✨' : '💰';
                           return (
                             <div key={dim} className="flex items-center gap-2">
