@@ -28,14 +28,39 @@ export default function AchievementsPage() {
   const [activeCategory, setActiveCategory] = useState<string>('all');
 
   useEffect(() => {
-    const token = '';
-    const uid = '';
-    const headers: any = {};
-    if (token) headers['Authorization'] = `Bearer ${token}`;
-    const qs = uid ? `?userId=${uid}` : '';
-    fetch(`${API}/api/v1/achievements${qs}`, { headers })
-      .then(r => r.json()).then(d => { setData(d.data); setLoading(false); })
-      .catch(() => { setError('Failed to load achievements'); setLoading(false); });
+    // Build achievements from localStorage data
+    const favs = JSON.parse(localStorage.getItem('favorites') || '[]').length;
+    const trips = JSON.parse(localStorage.getItem('saved_trips') || '[]').length;
+    const photos = JSON.parse(localStorage.getItem('profile_photos') || '[]').length;
+    const reviews = JSON.parse(localStorage.getItem('profile_reviews') || '[]').length;
+    const albums = JSON.parse(localStorage.getItem('profile_albums') || '[]').length;
+    const wishlist = JSON.parse(localStorage.getItem('wishlist') || '[]').length;
+    const wallet = JSON.parse(localStorage.getItem('wallet_goals') || '[]').length;
+    const savedTrips = JSON.parse(localStorage.getItem('saved_trips') || '[]');
+    const uniqueCities = new Set(savedTrips.map((t: any) => t.destination?.toLowerCase()).filter(Boolean));
+    const cities = uniqueCities.size;
+    setData({
+      achievements: [
+        { id: 'trips_1', title: 'First Trip Saved', description: 'Save your first trip plan', category: 'trips', unlocked: trips >= 1, progress: trips, target: 1 },
+        { id: 'trips_5', title: 'Explorer', description: 'Save 5 trips', category: 'trips', unlocked: trips >= 5, progress: Math.min(trips, 5), target: 5 },
+        { id: 'photos_1', title: 'First Photo', description: 'Upload your first photo', category: 'photos', unlocked: photos >= 1, progress: photos, target: 1 },
+        { id: 'photos_10', title: 'Photographer', description: 'Upload 10 photos', category: 'photos', unlocked: photos >= 10, progress: Math.min(photos, 10), target: 10 },
+        { id: 'favs_1', title: 'First Favorite', description: 'Save your first favorite place', category: 'favorites', unlocked: favs >= 1, progress: favs, target: 1 },
+        { id: 'favs_5', title: 'Collector', description: 'Save 5 favorites', category: 'favorites', unlocked: favs >= 5, progress: Math.min(favs, 5), target: 5 },
+        { id: 'review_1', title: 'First Review', description: 'Write your first review', category: 'reviews', unlocked: reviews >= 1, progress: reviews, target: 1 },
+        { id: 'album_1', title: 'Memory Maker', description: 'Create an album', category: 'albums', unlocked: albums >= 1, progress: albums, target: 1 },
+        { id: 'wish_1', title: 'Dreamer', description: 'Add to wishlist', category: 'wishlist', unlocked: wishlist >= 1, progress: wishlist, target: 1 },
+        { id: 'save_1', title: 'Saver', description: 'Create a savings goal', category: 'wallet', unlocked: wallet >= 1, progress: wallet, target: 1 },
+        { id: 'trips_10', title: 'Globetrotter', description: 'Save 10 trips', category: 'trips', unlocked: trips >= 10, progress: Math.min(trips, 10), target: 10 },
+        { id: 'photos_25', title: 'Shutterbug', description: 'Upload 25 photos', category: 'photos', unlocked: photos >= 25, progress: Math.min(photos, 25), target: 25 },
+        { id: 'favs_10', title: 'Curator', description: 'Save 10 favorites', category: 'favorites', unlocked: favs >= 10, progress: Math.min(favs, 10), target: 10 },
+        { id: 'review_5', title: 'Critic', description: 'Write 5 reviews', category: 'reviews', unlocked: reviews >= 5, progress: Math.min(reviews, 5), target: 5 },
+        { id: 'cities_3', title: 'City Hopper', description: 'Visit 3 different cities', category: 'cities', unlocked: cities >= 3, progress: Math.min(cities, 3), target: 3 },
+        { id: 'cities_5', title: 'State Explorer', description: 'Visit 5 different cities', category: 'cities', unlocked: cities >= 5, progress: Math.min(cities, 5), target: 5 },
+      ],
+      total: 16, unlocked: [trips >= 1, photos >= 1, favs >= 1, reviews >= 1, albums >= 1, wishlist >= 1, wallet >= 1, trips >= 5, photos >= 10, favs >= 5, trips >= 10, photos >= 25, favs >= 10, reviews >= 5, cities >= 3, cities >= 5].filter(Boolean).length,
+    });
+    setLoading(false);
   }, []);
 
   /* ── Loading ── */

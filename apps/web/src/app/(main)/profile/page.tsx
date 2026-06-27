@@ -45,11 +45,35 @@ export default function ProfilePage() {
     stats: {}, visitedCities: [], dna: [], badges: [],
   } : null;
   const data = user;
+
+  // Calculate real stats from localStorage
+  const trips = (() => { try { return JSON.parse(localStorage.getItem('saved_trips') || '[]'); } catch { return []; } })();
+  const photos = (() => { try { return JSON.parse(localStorage.getItem('profile_photos') || '[]'); } catch { return []; } })();
+  const favs = (() => { try { return JSON.parse(localStorage.getItem('favorites') || '[]'); } catch { return []; } })();
+  const reviews = (() => { try { return JSON.parse(localStorage.getItem('profile_reviews') || '[]'); } catch { return []; } })();
   const walletGoals = (() => { try { return JSON.parse(localStorage.getItem('wallet_goals') || '[]'); } catch { return []; } })();
+  const wishlist = (() => { try { return JSON.parse(localStorage.getItem('wishlist') || '[]'); } catch { return []; } })();
+  const albums = (() => { try { return JSON.parse(localStorage.getItem('profile_albums') || '[]'); } catch { return []; } })();
+
+  const totalTrips = trips.length;
+  const uniqueCities = new Set(trips.map((t: any) => t.destination?.toLowerCase()).filter(Boolean));
+  const totalXP = totalTrips * 100 + photos.length * 20 + reviews.length * 50 + favs.length * 10 + walletGoals.length * 15;
+  const calcLevel = Math.floor(totalXP / 100) + 1;
+  const xpForNext = (calcLevel * 100) - totalXP;
+
   const walletData = walletGoals.map((g: any) => ({ currentAmount: g.currentSavings || 0, targetAmount: g.targetAmount || 0 }));
   const followers: any[] = []; const following: any[] = [];
   const showFollowSheet = null; const setShowFollowSheet = () => {};
-  const achievements = null;
+  const achievements = {
+    unlocked: [totalTrips >= 1, photos.length >= 1, favs.length >= 1, reviews.length >= 1, albums.length >= 1, wishlist.length >= 1, walletGoals.length >= 1, totalTrips >= 5, photos.length >= 10, favs.length >= 5, reviews.length >= 3, uniqueCities.size >= 3].filter(Boolean).length,
+    total: 12,
+  };
+  if (data) {
+    data.level = calcLevel;
+    data.xp = totalXP;
+    data.stats = { cities: uniqueCities.size, trips: totalTrips, photos: photos.length, reviews: reviews.length, favorites: favs.length, savings: walletGoals.reduce((s: number, g: any) => s + (g.currentSavings || 0), 0) };
+    data.visitedCities = [...uniqueCities];
+  }
   const logout = () => signOut();
 
   /* ── Unauthenticated ── */

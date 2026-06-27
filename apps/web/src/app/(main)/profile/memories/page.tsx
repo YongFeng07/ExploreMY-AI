@@ -4,12 +4,6 @@ import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { MapPin, Camera, BookOpen, Navigation, X } from 'lucide-react';
 
-const API = '';
-function imgUrl(url: string | null | undefined): string | null {
-  if (!url) return null;
-  if (url.startsWith('http')) return url;
-  return `${API}${url.startsWith('/') ? '' : '/'}${url}`;
-}
 
 export default function MemoriesPage() {
   const [photos, setPhotos] = useState<any[]>([]);
@@ -82,8 +76,8 @@ export default function MemoriesPage() {
             {/* Photo content */}
             {m.type === 'photo' && m.url && (
               <div className="px-4 pt-3">
-                <img src={imgUrl(m.url)!} className="w-full h-56 object-cover rounded-xl cursor-pointer hover:opacity-90 transition-opacity"
-                  onClick={() => setViewPhoto(imgUrl(m.url))} alt=""
+                <img src={m.url} className="w-full h-56 object-cover rounded-xl cursor-pointer hover:opacity-90 transition-opacity"
+                  onClick={() => setViewPhoto(m.url)} alt=""
                   onError={e => { (e.target as HTMLImageElement).style.display = 'none'; }} />
                 <div className="flex items-center gap-2 mt-2 pb-3">
                   {m.place && <span className="text-[12px] text-[#8B7355] flex items-center gap-1"><MapPin className="h-3 w-3" />{m.place}</span>}

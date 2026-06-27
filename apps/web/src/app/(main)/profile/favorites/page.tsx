@@ -65,7 +65,7 @@ export default function FavoritesPage() {
             <div className="flex justify-center pt-3 pb-2"><div className="w-10 h-1 rounded-full bg-gray-300" /></div>
             <button onClick={() => setDetailItem(null)} className="absolute right-4 top-4 w-8 h-8 rounded-full bg-gray-100 flex items-center justify-center"><X className="h-4 w-4" /></button>
             <div className="h-48 mx-4 rounded-2xl overflow-hidden bg-[#FDF0E0] mt-2">
-              {detailItem.photo ? <img src={imgUrl(detailItem.photo)!} className="w-full h-full object-cover" alt="" /> :
+              {detailItem.photo ? <img src={detailItem.photo} className="w-full h-full object-cover" alt="" /> :
                 <div className="w-full h-full flex items-center justify-center text-6xl">📍</div>}
             </div>
             <div className="p-5 space-y-3">

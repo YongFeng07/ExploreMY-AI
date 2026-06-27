@@ -3,16 +3,6 @@
 import { useState, useEffect, useRef } from 'react';
 import Link from 'next/link';
 import { Camera, Upload, ArrowLeft, ChevronLeft, ChevronRight, Trash2, MapPin, Calendar, Loader2, X } from 'lucide-react';
-import { getAuthHeaders } from '@/stores/auth-store';
-
-const API = 'http://localhost:3001';
-
-function imgUrl(url: string | null | undefined): string | null {
-  if (!url) return null;
-  if (url.startsWith('http')) return url;
-  return `${API}${url.startsWith('/') ? '' : '/'}${url}`;
-}
-
 export default function PhotosPage() {
   const [photos, setPhotos] = useState<any[]>([]);
   const [caption, setCaption] = useState('');

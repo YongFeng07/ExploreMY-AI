@@ -4,8 +4,6 @@ import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { Heart, MapPin, Camera, BookOpen, Star, Sparkles, Compass } from 'lucide-react';
 
-const API = '';
-function imgUrl(url: string | null | undefined): string | null { if (!url) return null; if (url.startsWith('http')) return url; return `${API}${url.startsWith('/') ? '' : '/'}${url}`; }
 
 const typeIcon: Record<string, any> = { photo: Camera, journal: BookOpen, review: Star, trip: Sparkles, achievement: Star, wishlist: Compass };
 const typeLabel: Record<string, string> = { photo: 'shared a photo', journal: 'wrote a journal', review: 'left a review', trip: 'planned a trip', achievement: 'earned an achievement', wishlist: 'added to wishlist' };
@@ -73,7 +71,7 @@ export default function SocialFeedPage() {
               {/* Photo */}
               {a.photoUrl && (
                 <div className="px-4 pb-2">
-                  <img src={imgUrl(a.photoUrl)!} className="w-full h-56 object-cover rounded-xl" alt="" onError={e => { (e.target as HTMLImageElement).style.display = 'none'; }} />
+                  <img src={a.photoUrl} className="w-full h-56 object-cover rounded-xl" alt="" onError={e => { (e.target as HTMLImageElement).style.display = 'none'; }} />
                 </div>
               )}
 

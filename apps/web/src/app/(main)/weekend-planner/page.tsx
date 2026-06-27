@@ -1036,6 +1036,7 @@ export default function Page() {
   const [viewImages, setViewImages] = useState<string[] | null>(null);
   const [stopPhotos, setStopPhotos] = useState<Record<string, string[]>>({});
   const [selHotel, setSelHotel] = useState<any>(null);
+  const [hotelFilter, setHotelFilter] = useState<string>('all');
 
   // Fetch real Google photos when plan changes (stops + hotels)
   useEffect(() => {
@@ -1409,7 +1410,7 @@ export default function Page() {
             {BUDGETS.map(b => <button key={b} onClick={() => { setBudget(b); setCustB(''); }} className={cn('pill-travel', budget === b && !custB && 'pill-travel-active')}>RM {b}</button>)}
             <input value={custB} onChange={e => { setCustB(e.target.value); if (e.target.value) setBudget(0); }} placeholder="Custom" className="pill-travel text-sm w-24 text-center outline-none" />
           </div>
-          {(() => { const dd = Math.ceil((new Date(eD).getTime() - new Date(sD).getTime()) / 86400000) + 1; const pr: Record<number,{min:number;max:number}> = {1:{min:200,max:1000},2:{min:400,max:2500},3:{min:600,max:4000},4:{min:800,max:5500},5:{min:1200,max:7000},6:{min:1500,max:8500},7:{min:1800,max:10000},8:{min:2000,max:12000}}; const r = pr[Math.min(dd,8)] || pr[8]; return <p className="text-[10px] text-[#8B7355] mt-1">📍 {size}p × {dd}d: min <span className="font-bold text-[#7B5E3B]">RM {(r.min*size).toLocaleString()}</span> – max <span className="font-bold text-[#7B5E3B]">RM {(r.max*size).toLocaleString()}</span></p>; })()}
+          {(() => { if (!sD || !eD) return null; const dd = Math.ceil((new Date(eD).getTime() - new Date(sD).getTime()) / 86400000) + 1; if (isNaN(dd) || dd <= 0) return null; const pr: Record<number,{min:number;max:number}> = {1:{min:200,max:1000},2:{min:400,max:2500},3:{min:600,max:4000},4:{min:800,max:5500},5:{min:1200,max:7000},6:{min:1500,max:8500},7:{min:1800,max:10000},8:{min:2000,max:12000}}; const r = pr[Math.min(dd,8)] || pr[8]; return <p className="text-[10px] text-[#8B7355] mt-1">📍 {size}p × {dd}d: min <span className="font-bold text-[#7B5E3B]">RM {(r.min*size).toLocaleString()}</span> – max <span className="font-bold text-[#7B5E3B]">RM {(r.max*size).toLocaleString()}</span></p>; })()}
         </div>
 
         <div className="card-travel p-5">
@@ -1579,92 +1580,78 @@ export default function Page() {
                   {/* Vertical line */}
                   <div className="absolute left-[19px] top-3 bottom-3 w-0.5 bg-[#E5E7EB]" />
 
-                  {day.stops?.map((s: any, idx: number) => (
-                    <div key={idx} className="relative flex gap-4 mb-4 animate-in fade-in slide-in-from-bottom-2"
+                  {day.stops?.map((s: any, idx: number) => {
+                    const catIcons: Record<string,string> = {FOOD:'🍜',CAFE:'☕',TOURIST_ATTRACTION:'🏛️',NATURE:'🌿',HOTEL:'🏨',NIGHTLIFE:'🌙',SHOPPING:'🛍️'};
+                    const catIcon = catIcons[s.category] || '📍';
+                    const totalCost = Math.round((s.estimatedSpend + (s.entryFee ?? 0)));
+                    const hasPhoto = !!s.photoUrl;
+                    return (
+                    <div key={idx} className="relative flex gap-4 mb-5 group animate-in fade-in slide-in-from-bottom-2"
                       style={{ animationDelay: `${idx * 80}ms` }}
                       onClick={() => { setSelStop(s); setPhotoIdx(0); setNearbyPlaces([]);
                         const nLat = s.lat || destLat || 3.139; const nLng = s.lng || destLng || 101.6869;
                         fetch(`/api/places/nearby?lat=${nLat}&lng=${nLng}&radius=3000&limit=5`)
-                          .then(r => r.json()).then(d => setNearbyPlaces((d.data||[]).filter((p:any) => p.name !== s.placeName).slice(0,3))).catch(()=>{});
+                          .then(r => r.json()).then(d => setNearbyPlaces((d.data||[]).filter((p:any)=>p.name!==s.placeName).slice(0,3))).catch(()=>{});
                       }}>
-                      {/* Timeline marker */}
-                      <div className="relative z-10 flex-shrink-0">
-                        <div className={cn('w-[38px] h-[38px] rounded-full flex items-center justify-center text-white text-[13px] font-extrabold shadow-md',
-                          s.isHiddenGem ? 'bg-purple-500 ring-4 ring-purple-100' : s.isPhotoSpot ? 'bg-sky-500 ring-4 ring-sky-100' : 'bg-[#7B5E3B] ring-4 ring-amber-50')}>
-                          {idx + 1}
+                      {/* Timeline marker with connecting dot + line */}
+                      <div className="relative z-10 flex-shrink-0 flex flex-col items-center">
+                        <div className={cn('w-10 h-10 rounded-full flex items-center justify-center text-white text-[13px] font-extrabold shadow-lg transition-transform group-hover:scale-110',
+                          s.isHiddenGem?'bg-gradient-to-br from-purple-500 to-purple-600 ring-4 ring-purple-100':s.isPhotoSpot?'bg-gradient-to-br from-sky-400 to-blue-500 ring-4 ring-sky-100':'bg-gradient-to-br from-[#7B5E3B] to-[#9B7E5B] ring-4 ring-amber-50')}>
+                          {idx+1}
                         </div>
                       </div>
-
-                      {/* Stop card */}
-                      <div className="flex-1 bg-white rounded-2xl border border-[#E5E7EB] shadow-sm hover:shadow-md transition-shadow overflow-hidden cursor-pointer">
-                        {/* Photo */}
-                        {s.photoUrl ? (
-                          <div className="relative h-48 overflow-hidden" onClick={async (e: any) => { e.stopPropagation(); const p = stopPhotos[s.placeName]; if (!p?.length || p.length < 5) { try { const sr = await fetch(`/api/places/search?q=${encodeURIComponent(s.placeName + ' ' + (plan?.destination || ''))}&lat=${s.lat}&lng=${s.lng}&limit=1`); const sd = await sr.json(); const pid = sd.data?.[0]?.id; if (pid) { const dr = await fetch(`/api/places/${pid}`); const dd = await dr.json(); if (dd.data?.photos?.length > 5) { setStopPhotos(prev => ({...prev, [s.placeName]: dd.data.photos.slice(0, 20)})); setViewImages(dd.data.photos.slice(0, 20)); return; } } } catch {} } setViewImages(p?.length ? p : [s.photoUrl]); }}>
-                            <img src={s.photoUrl} className="w-full h-full object-cover hover:scale-105 transition-transform duration-500" alt="" loading="lazy" />
-                            <div className="absolute inset-0 bg-gradient-to-t from-black/30 to-transparent" />
-                            <span className="absolute bottom-3 right-3 bg-black/60 backdrop-blur rounded-full px-2.5 py-1 text-[10px] font-bold text-white flex items-center gap-1">
-                              <Camera className="h-3 w-3" /> {stopPhotos[s.placeName]?.length || 1}
-                            </span>
-                            {/* Time badge */}
-                            <span className="absolute top-3 left-3 bg-black/50 backdrop-blur rounded-full px-2.5 py-1 text-[11px] font-extrabold text-white flex items-center gap-1">
-                              <Clock className="h-3 w-3" /> {s.time}
-                            </span>
-                            {/* Category badge */}
-                            <span className="absolute top-3 right-3 bg-white/90 backdrop-blur rounded-full px-2.5 py-0.5 text-[10px] font-bold text-[#7B5E3B]">
-                              {s.category === 'FOOD' ? '🍜' : s.category === 'CAFE' ? '☕' : s.category === 'TOURIST_ATTRACTION' ? '🏛️' : s.category === 'NATURE' ? '🌿' : s.category === 'HOTEL' ? '🏨' : s.category === 'NIGHTLIFE' ? '🌙' : '📍'} {s.category?.replace(/_/g, ' ')}
-                            </span>
+                      {/* Card */}
+                      <div className="flex-1 bg-white rounded-2xl shadow-sm border border-[#E8E4DE] hover:shadow-xl hover:-translate-y-0.5 transition-all duration-300 overflow-hidden cursor-pointer">
+                        {hasPhoto ? (
+                          <div className="relative h-52 overflow-hidden" onClick={async (e:any)=>{e.stopPropagation();const p=stopPhotos[s.placeName];if(!p?.length||p.length<5){try{const sr=await fetch(`/api/places/search?q=${encodeURIComponent(s.placeName+' '+(plan?.destination||''))}&lat=${s.lat}&lng=${s.lng}&limit=1`);const sd=await sr.json();const pid=sd.data?.[0]?.id;if(pid){const dr=await fetch(`/api/places/${pid}`);const dd=await dr.json();if(dd.data?.photos?.length>5){setStopPhotos(prev=>({...prev,[s.placeName]:dd.data.photos.slice(0,20)}));setViewImages(dd.data.photos.slice(0,20));return;}}}catch{}}setViewImages(p?.length?p:[s.photoUrl]);}}>
+                            <img src={s.photoUrl} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-700" alt="" loading="lazy" />
+                            <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-black/10 to-transparent" />
+                            <span className="absolute top-3 left-3 bg-black/40 backdrop-blur-md rounded-full px-3 py-1.5 text-[11px] font-extrabold text-white flex items-center gap-1.5 shadow-lg"><Clock className="h-3 w-3"/> {s.time}</span>
+                            <span className="absolute top-3 right-3 bg-white/95 backdrop-blur-md rounded-full px-2.5 py-1 text-[10px] font-bold text-[#5C4A3A] shadow-md">{catIcon} {s.category?.replace(/_/g,' ')}</span>
+                            {s.isHiddenGem&&<span className="absolute bottom-3 left-3 bg-purple-500/90 backdrop-blur-md rounded-full px-2.5 py-1 text-[9px] font-bold text-white">💎 Hidden Gem</span>}
+                            <span className="absolute bottom-3 right-3 bg-black/50 backdrop-blur-md rounded-full px-2.5 py-1 text-[10px] font-bold text-white flex items-center gap-1"><Camera className="h-3 w-3"/> {stopPhotos[s.placeName]?.length||1} photos</span>
                           </div>
                         ) : (
-                          <div className="h-32 bg-gradient-to-br from-[#FDF6ED] to-[#F0E6D2] flex items-center justify-center text-5xl">{s.emoji ?? '📍'}</div>
+                          <div className="h-32 bg-gradient-to-br from-[#FDF6ED] to-[#F0E6D2] flex items-center justify-center text-6xl relative overflow-hidden">
+                            <div className="absolute inset-0 opacity-10 bg-[radial-gradient(circle_at_50%_120%,#7B5E3B,transparent)]" />
+                            {s.emoji||catIcon}
+                          </div>
                         )}
-
-                        {/* Card content */}
                         <div className="p-4">
                           <div className="flex items-start justify-between gap-2 mb-2">
-                            <h4 className="text-[15px] font-extrabold text-[#0E0E0E] leading-tight">{s.placeName}</h4>
-                            <div className="flex gap-1 flex-shrink-0">
-                              {s.isHiddenGem && <span className="text-[9px] font-bold bg-purple-100 text-purple-600 rounded-full px-2 py-0.5">💎</span>}
-                              {s.isPhotoSpot && <span className="text-[9px] font-bold bg-sky-100 text-sky-600 rounded-full px-2 py-0.5">📸</span>}
+                            <div className="flex-1 min-w-0">
+                              <h4 className="text-[16px] font-extrabold text-[#0E0E0E] leading-tight">{s.placeName}</h4>
+                              <div className="flex items-center gap-2 mt-1 flex-wrap">
+                                {s.rating>0&&<span className="flex items-center gap-0.5 bg-amber-50 text-amber-700 rounded-full px-2 py-0.5 text-[11px] font-bold"><Star className="h-3 w-3 fill-amber-400 text-amber-400"/> {s.rating}</span>}
+                                <span className="text-[11px] text-gray-400">{s.duration}</span>
+                                {s.transportFromPrev?.mode&&<span className="text-[11px] text-gray-400">{s.transportFromPrev.mode==='WALKING'?'🚶':'🚗'} {s.transportFromPrev.distance?`${(s.transportFromPrev.distance/1000).toFixed(1)}km`:'Nearby'}</span>}
+                              </div>
+                            </div>
+                            <div className="text-right flex-shrink-0">
+                              <span className="text-[18px] font-extrabold text-[#7B5E3B]">RM{totalCost}</span>
+                              <p className="text-[9px] text-[#8B7355]">per person</p>
                             </div>
                           </div>
-
-                          <div className="flex items-center gap-2 mb-2 text-[11px]">
-                            {s.rating > 0 && (
-                              <span className="flex items-center gap-0.5 bg-amber-50 text-amber-700 rounded-full px-2 py-0.5 font-bold">
-                                <Star className="h-3 w-3 fill-amber-400 text-amber-400" /> {s.rating}
-                              </span>
-                            )}
-                            <span className="text-gray-400">{s.duration}</span>
-                            {s.transportFromPrev?.mode && (
-                              <span className="text-gray-400">{s.transportFromPrev.mode === 'WALKING' ? '🚶' : '🚗'} {s.transportFromPrev.mode}</span>
-                            )}
-                          </div>
-
-                          <p className="text-[12px] text-[#6B7280] leading-relaxed mb-3">{s.description}</p>
-
-                          {s.mustTry && (
-                            <div className="bg-amber-50 border border-amber-100 rounded-xl px-3 py-2 mb-3 flex items-start gap-2">
-                              <span className="text-amber-500 text-sm">⭐</span>
-                              <div>
-                                <p className="text-[10px] font-bold text-amber-600 uppercase tracking-wider">Must Try</p>
-                                <p className="text-[12px] font-semibold text-[#7B5E3B]">{s.mustTry}</p>
+                          <p className="text-[12px] text-[#6B7280] leading-relaxed line-clamp-2 mb-3">{s.description}</p>
+                          {s.mustTry&&(
+                            <div className="bg-gradient-to-r from-amber-50 to-yellow-50 border border-amber-200 rounded-xl px-3 py-2.5 mb-3 flex items-center gap-3">
+                              <div className="w-8 h-8 rounded-lg bg-amber-100 flex items-center justify-center text-sm flex-shrink-0">⭐</div>
+                              <div className="flex-1 min-w-0">
+                                <p className="text-[9px] font-bold text-amber-600 uppercase tracking-wider">Must Try</p>
+                                <p className="text-[12px] font-bold text-[#7B5E3B] truncate">{s.mustTry}</p>
                               </div>
                             </div>
                           )}
-
-                          <div className="flex items-center justify-between pt-2 border-t border-[#F0EDE4]">
-                            <div className="flex items-center gap-1 text-[11px] text-gray-400">
-                              <Clock className="h-3 w-3" /> {s.time} · {s.duration}
-                            </div>
-                            <div className="text-right">
-                              <span className="text-[16px] font-extrabold text-[#7B5E3B]">RM {Math.round((s.estimatedSpend + (s.entryFee ?? 0)) * (plan.groupSize || 2))}</span>
-                              <span className="text-[10px] text-[#8B7355] ml-1">/ {plan.groupSize || 2}p</span>
-                            </div>
+                          <div className="flex items-center gap-1.5 flex-wrap">
+                            {s.isHiddenGem&&<span className="text-[9px] font-bold bg-purple-50 text-purple-500 rounded-full px-2 py-0.5">💎 Gem</span>}
+                            {s.isPhotoSpot&&<span className="text-[9px] font-bold bg-sky-50 text-sky-500 rounded-full px-2 py-0.5">📸 Photo</span>}
+                            <span className="text-[10px] text-gray-400 ml-auto">{s.time} · {s.duration}</span>
                           </div>
                         </div>
                       </div>
                     </div>
-                  ))}
+                    );
+                  })}
                 </div>
 
                 {/* Day summary */}
@@ -1732,54 +1719,67 @@ export default function Page() {
               );
             })()}
 
-            {/* Smart Allocation */}
-            <div className="card-travel p-4">
-              <p className="text-[10px] font-bold text-[#8B7355] uppercase tracking-wider mb-3">🧠 Smart AI Allocation</p>
-              <div className="space-y-2">
-                {[{ k: 'hotel', e: '🏨', l: 'Hotel', d: plan.budgetBreakdown.hotel, tip: plan.days?.length > 1 ? '1 night' : 'Not needed' },
-                  { k: 'food', e: '🍜', l: 'Food & Drink', d: plan.budgetBreakdown.food, tip: `${plan.totalStops} meals` },
-                  { k: 'transport', e: '🚕', l: 'Transport', d: plan.budgetBreakdown.transport, tip: plan.transportMode },
-                  { k: 'tickets', e: '🎫', l: 'Activities', d: plan.budgetBreakdown.tickets, tip: 'Entry fees' },
-                  { k: 'emergencyBuffer', e: '🆘', l: 'Emergency', d: plan.budgetBreakdown.emergencyBuffer, tip: '12.5% buffer' }]
-                  .filter(c => c.d?.estimatedCost > 0).map((c, i) => {
-                    const barPct = Math.min(100, (c.d.estimatedCost / plan.budgetBreakdown.total) * 100);
-                    const barColor = ['#7B5E3B','#D4B483','#6B8E4E','#5B7FA5','#C4943A'][i];
-                    return (
-                      <div key={c.k} className="flex items-center gap-3">
-                        <span className="text-lg w-7">{c.e}</span>
-                        <div className="flex-1">
-                          <div className="flex justify-between text-[11px] mb-0.5">
-                            <span className="font-bold text-[#0E0E0E]">{c.l}</span>
-                            <span className="font-extrabold" style={{color: barColor}}>RM {Math.round(c.d.estimatedCost)}</span>
-                          </div>
-                          <div className="h-2 bg-[#EDE4D8] rounded-full overflow-hidden">
-                            <div className="h-full rounded-full transition-all duration-500" style={{width:`${barPct}%`, backgroundColor: barColor}} />
-                          </div>
-                          <span className="text-[9px] text-[#8B7355]">{c.tip} · {Math.round(c.d.percentage)}%</span>
-                        </div>
+            {/* Smart Allocation — Professional Trip.com style */}
+            <div className="card-travel p-5">
+              <p className="text-[11px] font-bold text-[#8B7355] uppercase tracking-wider mb-4">🧠 AI Budget Allocation</p>
+              {/* Pie-like donut visualization */}
+              {(() => {
+                const cats = [
+                  { k:'hotel',e:'🏨',l:'Hotel',d:plan.budgetBreakdown.hotel,t:plan.days?.length>1?'per night':'Not needed' },
+                  { k:'food',e:'🍜',l:'Food & Drink',d:plan.budgetBreakdown.food,t:`${plan.totalStops} meals` },
+                  { k:'transport',e:'🚕',l:'Transport',d:plan.budgetBreakdown.transport,t:plan.transportMode||'Local' },
+                  { k:'activities',e:'🎫',l:'Activities',d:plan.budgetBreakdown.tickets||plan.budgetBreakdown.activities,t:'Entry fees' },
+                  { k:'shopping',e:'🛍️',l:'Shopping',d:plan.budgetBreakdown.shopping||plan.budgetBreakdown.emergencyBuffer,t:'Souvenirs & misc' },
+                ].filter(c=>c.d&&(c.d.estimatedCost||c.d)>0);
+                const colors = ['#7B5E3B','#D4A95F','#6B8E4E','#5B7FA5','#C4943A'];
+                const total = cats.reduce((s,c)=>s+(c.d?.estimatedCost||c.d||0),0);
+                let accum = 0;
+                return <div className="space-y-3">
+                  {cats.map((c,i)=>{
+                    const cost = c.d?.estimatedCost||c.d||0;
+                    const pct = Math.round(cost/total*100);
+                    const dashLen = Math.round(pct*3.14);
+                    accum+=pct;
+                    return <div key={c.k} className="flex items-center gap-3 group cursor-default">
+                      <div className="w-12 h-12 rounded-xl flex items-center justify-center text-xl flex-shrink-0 shadow-sm" style={{backgroundColor:colors[i]+'18'}}>{c.e}</div>
+                      <div className="flex-1 min-w-0">
+                        <div className="flex justify-between mb-1"><span className="text-[12px] font-bold text-[#0E0E0E]">{c.l}</span><span className="text-[14px] font-extrabold" style={{color:colors[i]}}>RM{Math.round(cost).toLocaleString()}</span></div>
+                        <div className="h-2.5 bg-[#F0EDE4] rounded-full overflow-hidden"><div className="h-full rounded-full transition-all duration-700" style={{width:`${pct}%`,backgroundColor:colors[i]}}/></div>
+                        <span className="text-[9px] text-[#8B7355]">{c.t} · {pct}% of budget</span>
                       </div>
-                    );
+                    </div>;
                   })}
+                  {plan.days?.length>1&&<div className="pt-2 border-t border-[#EDE4D8] flex justify-between text-[12px]"><span className="font-bold text-[#0E0E0E]">Per Day Average</span><span className="font-extrabold text-[#7B5E3B]">RM {Math.round(total/plan.days.length).toLocaleString()}</span></div>}
+                </div>;
+              })()}
+            </div>
+
+            {/* Budget Alerts + Tips */}
+            <div className="card-travel p-4">
+              <p className="text-[10px] font-bold text-[#8B7355] uppercase tracking-wider mb-2">🔔 Smart Alerts</p>
+              <div className="space-y-1.5">
+                {(()=>{const bb=plan.budgetBreakdown;const a=[];if((bb.hotel?.estimatedCost||bb.hotel||0)/bb.total>0.35)a.push('🏨 Hotel >35% — try budget stays');if((bb.transport?.estimatedCost||bb.transport||0)/bb.total>0.25)a.push('🚕 Transport >25% — use public transit');if(util>0.85)a.push('⚠️ Budget tight — plan meals carefully');if(!a.length)a.push('✅ Budget balanced — enjoy your trip!');return a.map((s,i)=><p key={i} className="text-[11px] text-[#5C4A3A] leading-relaxed py-1.5 px-3 bg-[#FDF6ED] rounded-lg">{s}</p>);})()}
               </div>
             </div>
 
-            {/* Budget Alerts */}
-            {(() => {
-              const alerts: string[] = [];
-              const bb = plan.budgetBreakdown;
-              if (bb.hotel?.estimatedCost / bb.total > 0.35) alerts.push('🏨 Hotel is over 35% of budget — consider a cheaper option');
-              if (bb.transport?.estimatedCost / bb.total > 0.25) alerts.push('🚕 Transport costs are high — try public transit');
-              if (bb.budgetUtilization > 0.9) alerts.push('⚠️ Almost at budget limit — avoid impulse spending');
-              if (!alerts.length) alerts.push('✅ No budget warnings — everything looks balanced!');
-              return (
-                <div className="card-travel p-4">
-                  <p className="text-[10px] font-bold text-[#8B7355] uppercase tracking-wider mb-2">🔔 Budget Alerts</p>
-                  {alerts.map((a, i) => (
-                    <p key={i} className="text-[11px] text-[#5C4A3A] leading-relaxed py-1 border-b border-[#EDE4D8] last:border-0">{a}</p>
-                  ))}
-                </div>
-              );
-            })()}
+            {/* Per-Day Budget Breakdown */}
+            {plan.days?.length>1 && (
+            <div className="card-travel p-4">
+              <p className="text-[10px] font-bold text-[#8B7355] uppercase tracking-wider mb-3">📅 Daily Budget</p>
+              <div className="space-y-1.5">
+                {plan.days.map((d:any,i:number)=>{
+                  const dc = d.dayTotalCost||Math.round(plan.budgetBreakdown.total/plan.days.length);
+                  const dpct = Math.round(dc/plan.budgetBreakdown.total*100);
+                  return <div key={i} className="flex items-center gap-2 text-[11px]">
+                    <span className="font-bold text-[#0E0E0E] w-12">Day {d.dayNumber}</span>
+                    <div className="flex-1 h-1.5 bg-[#F0EDE4] rounded-full overflow-hidden"><div className="h-full rounded-full bg-[#7B5E3B]" style={{width:`${dpct}%`}}/></div>
+                    <span className="font-extrabold text-[#7B5E3B] w-20 text-right">RM{dc.toLocaleString()}</span>
+                    <span className="text-[#8B7355] w-8 text-right">{dpct}%</span>
+                  </div>;
+                })}
+              </div>
+            </div>
+            )}
 
             {/* Hotel Recommendations */}
             {plan.budgetBreakdown?.hotel?.hotelOptions?.length > 0 && (plan.days?.length || 2) > 1 && (
@@ -1992,11 +1992,11 @@ export default function Page() {
                 {/* Filter tabs */}
                 <div className="flex gap-1.5 mb-3">
                   {['all','budget','mid','luxury'].map(f => (
-                    <button key={f} className={cn('text-[10px] font-bold px-3 py-1 rounded-full capitalize', f === 'all' ? 'bg-indigo-100 text-indigo-600' : 'text-[#8B7355] hover:bg-gray-100')}>{f === 'all' ? 'All' : f}</button>
+                    <button key={f} onClick={()=>setHotelFilter(f)} className={cn('text-[10px] font-bold px-3 py-1 rounded-full capitalize transition-all', hotelFilter===f?'bg-indigo-100 text-indigo-600 shadow-sm':'text-[#8B7355] hover:bg-gray-100')}>{f==='all'?'All':f} {f!=='all'&&<span className="text-[8px] ml-0.5">({plan.whereToStay.filter((h:any)=>h.type===f).length})</span>}</button>
                   ))}
                 </div>
                 <div className="space-y-3">
-                  {plan.whereToStay.map((h: any, i: number) => (
+                  {plan.whereToStay.filter((h:any)=>hotelFilter==='all'||h.type===hotelFilter).map((h: any, i: number) => (
                     <div key={i} className="bg-white rounded-xl border border-gray-200 shadow-sm overflow-hidden hover:shadow-lg hover:border-indigo-200 transition-all cursor-pointer group" onClick={() => setSelHotel(h)}>
                       <div className="flex">
                         {/* Photo — Agoda style with tag overlay */}
@@ -3130,11 +3130,42 @@ export default function Page() {
                 </div>
               )}
               {/* Quick Stats */}
-              <div className="grid grid-cols-3 gap-2">
-                {selHotel.starRating > 0 && <div className="text-center bg-amber-50 rounded-xl py-2"><p className="text-[10px] text-gray-500">Star Rating</p><p className="text-[13px] font-extrabold text-amber-600">{'⭐'.repeat(Math.min(5,selHotel.starRating))}</p></div>}
-                {selHotel.rating > 0 && <div className="text-center bg-green-50 rounded-xl py-2"><p className="text-[10px] text-gray-500">Guest Rating</p><p className="text-[13px] font-extrabold text-green-600">{selHotel.rating}/5</p></div>}
-                <div className="text-center bg-blue-50 rounded-xl py-2"><p className="text-[10px] text-gray-500">Value</p><p className="text-[13px] font-extrabold text-blue-600">{selHotel.pricePerNight < 200 ? '💰 Great' : selHotel.pricePerNight < 500 ? '⭐ Good' : '👑 Premium'}</p></div>
+              <div className="grid grid-cols-4 gap-2">
+                {selHotel.starRating > 0 && <div className="text-center bg-amber-50 rounded-xl py-3"><p className="text-[9px] text-gray-500 uppercase">Stars</p><p className="text-[16px] font-extrabold text-amber-600">{'⭐'.repeat(Math.min(5,selHotel.starRating))}</p></div>}
+                {selHotel.rating > 0 && <div className="text-center bg-green-50 rounded-xl py-3"><p className="text-[9px] text-gray-500 uppercase">Rating</p><p className="text-[16px] font-extrabold text-green-600">{selHotel.rating}/5</p></div>}
+                {selHotel.distanceFromCenter != null && <div className="text-center bg-blue-50 rounded-xl py-3"><p className="text-[9px] text-gray-500 uppercase">City Center</p><p className="text-[16px] font-extrabold text-blue-600">{selHotel.distanceFromCenter}km</p></div>}
+                <div className="text-center bg-purple-50 rounded-xl py-3"><p className="text-[9px] text-gray-500 uppercase">Value</p><p className="text-[16px] font-extrabold text-purple-600">{selHotel.pricePerNight < 200 ? '💰' : selHotel.pricePerNight < 500 ? '⭐' : '👑'} {selHotel.pricePerNight < 200 ? 'Great' : selHotel.pricePerNight < 500 ? 'Good' : 'Premium'}</p></div>
               </div>
+              {/* Check-in / Check-out */}
+              {(selHotel.checkIn || selHotel.checkOut) && (
+                <div className="flex gap-2">
+                  <div className="flex-1 text-center bg-indigo-50 rounded-xl py-3"><p className="text-[9px] text-gray-500 uppercase">Check-in</p><p className="text-[13px] font-extrabold text-indigo-600">{selHotel.checkIn || '3:00 PM'}</p></div>
+                  <div className="flex-1 text-center bg-rose-50 rounded-xl py-3"><p className="text-[9px] text-gray-500 uppercase">Check-out</p><p className="text-[13px] font-extrabold text-rose-600">{selHotel.checkOut || '12:00 PM'}</p></div>
+                  {selHotel.reviewCount > 0 && <div className="flex-1 text-center bg-amber-50 rounded-xl py-3"><p className="text-[9px] text-gray-500 uppercase">Reviews</p><p className="text-[13px] font-extrabold text-amber-600">{selHotel.reviewCount.toLocaleString()}</p></div>}
+                </div>
+              )}
+              {/* Room Types */}
+              {selHotel.roomTypes?.length > 0 && (
+                <div>
+                  <p className="text-[11px] font-bold text-gray-500 uppercase tracking-wider mb-2">🛏️ Room Types</p>
+                  <div className="flex flex-wrap gap-1.5">
+                    {selHotel.roomTypes.map((r: string) => (
+                      <span key={r} className="text-[11px] font-medium bg-gray-50 text-gray-700 rounded-lg px-3 py-1.5 border border-gray-100">{r}</span>
+                    ))}
+                  </div>
+                </div>
+              )}
+              {/* Hotel Facilities */}
+              {selHotel.hotelFacilities?.length > 0 && (
+                <div>
+                  <p className="text-[11px] font-bold text-gray-500 uppercase tracking-wider mb-2">🏢 Hotel Facilities</p>
+                  <div className="flex flex-wrap gap-1.5">
+                    {selHotel.hotelFacilities.map((f: string) => (
+                      <span key={f} className="text-[10px] font-medium bg-gray-100 text-gray-600 rounded-full px-2.5 py-1">{f}</span>
+                    ))}
+                  </div>
+                </div>
+              )}
               {/* Book Now — Agoda/Trip.com CTAs */}
               <div className="space-y-2">
                 <a href={`https://www.agoda.com/search?q=${encodeURIComponent(selHotel.name)}+${encodeURIComponent(plan.destination)}`} target="_blank"

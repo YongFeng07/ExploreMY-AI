@@ -1,7 +1,7 @@
 // @ts-nocheck
 // @ts-nocheck
 'use client';
-import { useEffect, useState, useCallback } from 'react';
+import { useEffect, useState, useCallback, useRef } from 'react';
 import { AdvancedMarker } from '@vis.gl/react-google-maps';
 import { MapContainer } from '@/components/map/map-container';
 import { PlaceDetailView } from '@/components/places/place-detail-view';
@@ -10,7 +10,7 @@ import { Star, Navigation, LocateFixed, Loader2, MapPin, Heart, Sparkles, Crossh
 import { formatDistance } from '@/lib/utils';
 
 const API = '/api';
-const RADIUS = 20000; // 20km radius for more coverage
+const RADIUS = 5000; // 5km radius — only truly nearby places
 
 const CATEGORIES = [
   { v: '', l: '🌏 All', icon: '🌏' },
@@ -35,6 +35,7 @@ export default function ExplorePage() {
   const [favorites, setFavorites] = useState<any[]>([]);
   const [favNames, setFavNames] = useState<Set<string>>(new Set());
   const [fetchingLocation, setFetchingLocation] = useState(true);
+  const manualRef = useRef(false);
   const [viewImages, setViewImages] = useState<string[] | null>(null);
 
   // Load favorites from localStorage
@@ -78,6 +79,7 @@ export default function ExplorePage() {
 
     const watchId = navigator.geolocation.watchPosition(
       pos => {
+        if (manualRef.current) return; // don't override manual city input
         setUserLoc({ lat: pos.coords.latitude, lng: pos.coords.longitude });
         setGpsAccuracy(pos.coords.accuracy);
         setGpsDenied(false);
@@ -154,14 +156,21 @@ export default function ExplorePage() {
             </AdvancedMarker>
           ))}
         </MapContainer>
-        {/* Top badges */}
-        <div className="absolute top-3 left-3 right-3 flex items-center justify-between">
-          <div className="bg-white/90 backdrop-blur rounded-full px-3 py-1.5 text-[11px] font-extrabold text-[#7B5E3B] shadow-md flex items-center gap-1.5">
-            <Crosshair className="h-3.5 w-3.5 text-[#3B82F6]" />
-            {gpsAccuracy ? `${Math.round(gpsAccuracy)}m accuracy` : 'Locating...'}
-          </div>
-          <div className="bg-white/90 backdrop-blur rounded-full px-3 py-1.5 text-[11px] font-extrabold text-[#7B5E3B] shadow-md">
-            {places.length} places · {RADIUS/1000}km
+        {/* Top badges + City search */}
+        <div className="absolute top-3 left-3 right-3">
+          <form onSubmit={async (e) => { e.preventDefault(); const city = (e.target as any).city.value; if (!city) return; manualRef.current = true; setFetchingLocation(true); try { const r = await fetch(`https://maps.googleapis.com/maps/api/geocode/json?address=${encodeURIComponent(city + ', Malaysia')}&key=${process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY}`); const j = await r.json(); if (j.results?.[0]?.geometry?.location) { const loc = j.results[0].geometry.location; setUserLoc(loc); setGpsDenied(false); setFetchingLocation(false); } } catch { setFetchingLocation(false); } }} className="flex gap-2 mb-2">
+            <input name="city" placeholder="City or town..." defaultValue="" className="flex-1 bg-white/95 backdrop-blur rounded-full px-4 py-2.5 text-[12px] font-semibold text-[#0E0E0E] placeholder:text-gray-400 shadow-md outline-none border-0" autoComplete="off" />
+            <button type="submit" className="bg-[#3B82F6] text-white rounded-full px-4 py-2.5 text-[11px] font-extrabold shadow-md">Go</button>
+            <button type="button" onClick={() => { manualRef.current = false; setFetchingLocation(true); setUserLoc(null); setGpsDenied(false); }} className="bg-white/90 backdrop-blur rounded-full px-3 py-2.5 text-[11px] font-extrabold shadow-md text-[#3B82F6]">📍</button>
+          </form>
+          <div className="flex items-center justify-between">
+            <div className="bg-white/90 backdrop-blur rounded-full px-3 py-1.5 text-[11px] font-extrabold text-[#7B5E3B] shadow-md flex items-center gap-1.5">
+              <Crosshair className="h-3.5 w-3.5 text-[#3B82F6]" />
+              {gpsAccuracy ? `${Math.round(gpsAccuracy)}m accuracy` : 'Locating...'}
+            </div>
+            <div className="bg-white/90 backdrop-blur rounded-full px-3 py-1.5 text-[11px] font-extrabold text-[#7B5E3B] shadow-md">
+              {places.length} places · {RADIUS/1000}km
+            </div>
           </div>
         </div>
         {/* User location button */}

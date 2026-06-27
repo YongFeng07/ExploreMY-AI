@@ -41,20 +41,28 @@ export default function TravelStatsPage() {
   const [activeTab, setActiveTab] = useState<'overview' | 'states' | 'timeline'>('overview');
 
   useEffect(() => {
-    const token = '';
-    const uid = '' || '';
-    const h: any = {};
-    if (token) h['Authorization'] = `Bearer ${token}`;
+    // Aggregate stats from all localStorage sources
+    const trips = JSON.parse(localStorage.getItem('saved_trips') || '[]');
+    const photos = JSON.parse(localStorage.getItem('profile_photos') || '[]');
+    const favs = JSON.parse(localStorage.getItem('favorites') || '[]');
+    const reviews = JSON.parse(localStorage.getItem('profile_reviews') || '[]');
+    const wishlist = JSON.parse(localStorage.getItem('wishlist') || '[]');
+    const goals = JSON.parse(localStorage.getItem('wallet_goals') || '[]');
+    const albums = JSON.parse(localStorage.getItem('profile_albums') || '[]');
+    const totalSaved = goals.reduce((s: number, g: any) => s + (g.currentSavings || 0), 0);
+    // Extract unique destinations
+    const destinations = new Set<string>();
+    trips.forEach((t: any) => { if (t.destination) destinations.add(t.destination.toLowerCase()); });
+    favs.forEach((f: any) => { if (f.city) destinations.add(f.city.toLowerCase()); });
 
-    Promise.all([
-      fetch(`${API}/api/v1/auth/me?userId=${uid}`, { headers: h }).then(r => r.json()).catch(() => ({ data: {} })),
-      fetch(`${API}/api/v1/achievements?userId=${uid}`, { headers: h }).then(r => r.json()).catch(() => ({ data: null })),
-      fetch(`${API}/api/v1/auth/me/travel-history?userId=${uid}`, { headers: h }).then(r => r.json()).catch(() => ({ data: [] })),
-      fetch(`${API}/api/v1/auth/me/trips?userId=${uid}`, { headers: h }).then(r => r.json()).catch(() => ({ data: [] })),
-    ]).then(([profile, achieve, history, trips]) => {
-      setData({ profile: profile.data || profile, achieve: achieve.data, history: history.data || [], trips: trips.data || [] });
-      setLoading(false);
+    setData({
+      profile: { level: Math.floor((trips.length + photos.length + reviews.length) / 3) + 1, xp: trips.length * 100 + photos.length * 20 + reviews.length * 50 },
+      achieve: { unlocked: [trips.length >= 1, photos.length >= 1, favs.length >= 1, reviews.length >= 1, albums.length >= 1, wishlist.length >= 1, goals.length >= 1].filter(Boolean).length, total: 7 },
+      history: [...destinations].map(d => ({ city: d, state: d })),
+      trips,
+      stats: { totalTrips: trips.length, totalPhotos: photos.length, totalFavorites: favs.length, totalReviews: reviews.length, totalSaved, totalWishlist: wishlist.length, totalAlbums: albums.length, totalGoals: goals.length, citiesVisited: destinations.size },
     });
+    setLoading(false);
   }, []);
 
   if (loading) return <div className="min-h-screen bg-[#FFFDF7] flex items-center justify-center"><div className="w-10 h-10 rounded-full border-2 border-[#C4956A]/20 border-t-[#C4956A] animate-spin" /></div>;

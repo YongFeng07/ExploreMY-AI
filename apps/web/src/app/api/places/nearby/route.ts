@@ -137,7 +137,8 @@ export async function GET(request: NextRequest) {
         }
         return true;
       })
-      .sort((a, b) => a.distance - b.distance);
+      .sort((a, b) => a.distance - b.distance)
+      .filter(p => p.distance <= parseInt(radius)); // Strict radius filter
 
     return NextResponse.json({ data: places, meta: { total: places.length, lat, lng } });
   } catch (err) {

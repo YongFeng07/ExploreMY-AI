@@ -17,7 +17,8 @@ export async function POST(request: Request) {
     const minBudget = durationHours * 30;
     if (budget < minBudget) return NextResponse.json({ error: `Minimum budget is RM${minBudget} for ${durationHours}h date` }, { status: 400 });
 
-    const startHr = preferredTime === 'MORNING' ? 9 : preferredTime === 'AFTERNOON' ? 14 : preferredTime === 'EVENING' ? 18 : 12;
+    // Parse actual time string (e.g., "19:00") or mode (e.g., "EVENING")
+    const startHr = preferredTime?.includes(':') ? parseInt(preferredTime.split(':')[0]) || 18 : preferredTime === 'MORNING' ? 9 : preferredTime === 'AFTERNOON' ? 14 : preferredTime === 'EVENING' ? 18 : 18;
     const endHr = (startHr + durationHours) % 24;
 
     // Randomization for unique results

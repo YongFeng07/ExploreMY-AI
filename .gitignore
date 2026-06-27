@@ -19,3 +19,4 @@ apps/api/exploremy-data*
 apps/api/test-*.json
 
 .vercel
+.env*

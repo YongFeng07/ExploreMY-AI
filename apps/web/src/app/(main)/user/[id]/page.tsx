@@ -6,8 +6,6 @@ import { useParams, useRouter } from 'next/navigation';
 import { motion } from 'framer-motion';
 import { ArrowLeft, MapPin, Camera, BookOpen, Star, Clock, Heart, UserPlus, UserCheck, Navigation, ChevronRight, Award, Grid3X3, List } from 'lucide-react';
 
-const API = '';
-function imgUrl(url: string | null | undefined): string | null { if (!url) return null; if (url.startsWith('http')) return url; return `${API}${url.startsWith('/') ? '' : '/'}${url}`; }
 
 export default function UserProfilePage() {
   const { id } = useParams<{ id: string }>();
@@ -67,7 +65,7 @@ export default function UserProfilePage() {
     <div className="min-h-screen bg-[#FFFDF7]">
       {/* Cover Photo */}
       <div className="relative h-44 overflow-hidden bg-gradient-to-br from-[#234530] via-[#315B43] to-[#5E876A]">
-        {coverUrl && <img src={imgUrl(coverUrl)!} className="w-full h-full object-cover" alt="" />}
+        {coverUrl && <img src={coverUrl} className="w-full h-full object-cover" alt="" />}
         <div className="absolute inset-0 bg-gradient-to-t from-black/40 to-transparent" />
         {/* Back + Follow */}
         <div className="absolute top-4 left-4 right-4 flex items-center justify-between z-10">
@@ -85,7 +83,7 @@ export default function UserProfilePage() {
       <div className="px-5 -mt-12 relative z-10">
         <div className="flex items-end gap-4 mb-3">
           <div className="w-[88px] h-[88px] rounded-full bg-gradient-to-br from-[#C4956A] to-[#D4A574] flex items-center justify-center text-white text-[32px] font-bold ring-[4px] ring-[#FFFDF7] shadow-lg flex-shrink-0 overflow-hidden">
-            {avatarUrl ? <img src={imgUrl(avatarUrl)!} className="w-full h-full object-cover" alt="" /> : displayName[0]}
+            {avatarUrl ? <img src={avatarUrl} className="w-full h-full object-cover" alt="" /> : displayName[0]}
           </div>
           <div className="flex-1 pb-1 min-w-0">
             <h1 className="text-[22px] font-extrabold text-[#3C2415] truncate">{displayName}</h1>
@@ -143,8 +141,8 @@ export default function UserProfilePage() {
             </div>
             <div className="grid grid-cols-3 gap-1">
               {photos.map((p: any, i: number) => (
-                <div key={i} onClick={() => setViewPhoto(imgUrl(p.url))} className="aspect-square rounded-lg overflow-hidden bg-[#F5EDE3] cursor-pointer hover:opacity-90 transition-opacity">
-                  <img src={imgUrl(p.url)} className="w-full h-full object-cover" alt="" onError={e => { (e.target as HTMLImageElement).style.display = 'none'; }} />
+                <div key={i} onClick={() => setViewPhoto(p.url)} className="aspect-square rounded-lg overflow-hidden bg-[#F5EDE3] cursor-pointer hover:opacity-90 transition-opacity">
+                  <img src={p.url} className="w-full h-full object-cover" alt="" onError={e => { (e.target as HTMLImageElement).style.display = 'none'; }} />
                 </div>
               ))}
             </div>
@@ -153,9 +151,9 @@ export default function UserProfilePage() {
 
         {/* Photos List */}
         {photos.length > 0 && viewMode === 'list' && photos.map((p: any, i: number) => (
-          <div key={i} onClick={() => setViewPhoto(imgUrl(p.url))} className="bg-white rounded-2xl p-3 shadow-sm border border-[#E8D5C4]/50 cursor-pointer hover:shadow-md flex gap-3">
+          <div key={i} onClick={() => setViewPhoto(p.url)} className="bg-white rounded-2xl p-3 shadow-sm border border-[#E8D5C4]/50 cursor-pointer hover:shadow-md flex gap-3">
             <div className="w-20 h-20 rounded-xl overflow-hidden bg-[#F5EDE3] flex-shrink-0">
-              <img src={imgUrl(p.url)} className="w-full h-full object-cover" alt="" /></div>
+              <img src={p.url} className="w-full h-full object-cover" alt="" /></div>
             <div className="flex-1 min-w-0">
               <p className="text-[14px] font-bold text-[#3C2415]">{p.caption || 'Photo'}</p>
               {p.place && <p className="text-[12px] text-[#8B7355] flex items-center gap-1 mt-1"><MapPin className="h-3 w-3" />{p.place}</p>}
