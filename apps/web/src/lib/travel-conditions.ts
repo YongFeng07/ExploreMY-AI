@@ -137,8 +137,8 @@ export default function computeLiveConditions(
   const isCentral = oRegion === 'CENTRAL' || dRegion === 'CENTRAL';
 
   const highways = getHighwaysForRoute(originLat || 3.139, originLng || 101.6869, destLat || 5.4141, destLng || 100.3288);
-  const floodSections = getFloodProneSections(originLat || 3.139, originLng || 101.6869, destLat || 5.4141, destLng || 100.3288);
-  const roadWorks = getRoadWorks(month, highways);
+  const floodSections = getFloodProneSections(originLat || 3.139, originLng || 101.6869, destLat || 5.4141, destLng || 100.3288) || [];
+  const roadWorks = getRoadWorks(month, highways) || [];
 
   // 鈹€鈹€ Malaysian monsoon analysis 鈹€鈹€
   // Northeast Monsoon: Nov鈥揗ar (heavy rain East Coast, moderate West Coast)

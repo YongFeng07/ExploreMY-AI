@@ -1,7 +1,7 @@
 // @ts-nocheck
 'use client';
 import { useState, useEffect } from 'react';
-import { MapPin, CalendarDays, Users, Sparkles, Clock, Star, Navigation, ChevronLeft, ChevronRight } from 'lucide-react';
+import { MapPin, CalendarDays, Users, Sparkles, Clock, Star, Navigation, ChevronLeft, ChevronRight, Camera } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { toast } from 'sonner';
 import { getTransportMode } from '@/lib/transport-mode';
@@ -611,8 +611,8 @@ function computeLiveConditions(
   const isCentral = oRegion === 'CENTRAL' || dRegion === 'CENTRAL';
 
   const highways = getHighwaysForRoute(originLat || 3.139, originLng || 101.6869, destLat || 5.4141, destLng || 100.3288);
-  const floodSections = getFloodProneSections(originLat || 3.139, originLng || 101.6869, destLat || 5.4141, destLng || 100.3288);
-  const roadWorks = getRoadWorks(month, highways);
+  const floodSections = getFloodProneSections(originLat || 3.139, originLng || 101.6869, destLat || 5.4141, destLng || 100.3288) || [];
+  const roadWorks = getRoadWorks(month, highways) || [];
 
   // ── Malaysian monsoon analysis ──
   // Northeast Monsoon: Nov–Mar (heavy rain East Coast, moderate West Coast)
@@ -1000,8 +1000,9 @@ export default function Page() {
   const [originLng, setOriginLng] = useState(0);
   const [tripDistance, setTripDistance] = useState<number | null>(null);
   const [aiTransport, setAiTransport] = useState<{mode:string;emoji:string;duration:string;cost:number}|null>(null);
-  const [sD, setSD] = useState('2026-06-21');
-  const [eD, setED] = useState('2026-06-22');
+  const today = new Date(); const tomorrow = new Date(); tomorrow.setDate(today.getDate() + 1);
+  const [sD, setSD] = useState(today.toISOString().split('T')[0]);
+  const [eD, setED] = useState(tomorrow.toISOString().split('T')[0]);
   const [budget, setBudget] = useState(800);
   const [custB, setCustB] = useState('');
   const [group, setGroup] = useState('COUPLE');
@@ -1027,6 +1028,46 @@ export default function Page() {
   const [roadtripDetail, setRoadtripDetail] = useState<any>(null);
   const [roadtripData, setRoadtripData] = useState<any>(null);
   const [viewImages, setViewImages] = useState<string[] | null>(null);
+  const [stopPhotos, setStopPhotos] = useState<Record<string, string[]>>({});
+  const [selHotel, setSelHotel] = useState<any>(null);
+
+  // Fetch real Google photos when plan changes (stops + hotels)
+  useEffect(() => {
+    if (!plan?.days?.length) return;
+    const fetchPhotos = async () => {
+      const map: Record<string, string[]> = {};
+      // Fetch for stops
+      for (const day of plan.days || []) {
+        for (const stop of day.stops || []) {
+          try {
+            const r = await fetch(`/api/places/search?q=${encodeURIComponent(stop.placeName + ' ' + (plan.destination || ''))}&lat=${stop.lat}&lng=${stop.lng}&limit=1`);
+            const d = await r.json();
+            if (d.data?.[0]?.photos?.length) {
+              const gp = d.data[0].photos.slice(0, 10);
+              const up = Array.from({length: 10}, (_, i) => `https://source.unsplash.com/800x600/?${encodeURIComponent(stop.placeName)}+${i}`);
+              map[stop.placeName] = [...gp, ...up].slice(0, 20);
+              stop.photoUrl = gp[0] || up[0];
+            }
+          } catch {}
+        }
+      }
+      // Fetch for hotels
+      for (const hotel of plan.whereToStay || []) {
+        try {
+          const r = await fetch(`/api/places/search?q=${encodeURIComponent(hotel.name + ' ' + (plan.destination || '') + ' hotel')}&lat=${hotel.lat || plan.destinationLat || 3.139}&lng=${hotel.lng || plan.destinationLng || 101.6869}&limit=1`);
+          const d = await r.json();
+          if (d.data?.[0]?.photos?.length) {
+            const gp = d.data[0].photos.slice(0, 10);
+            const up = Array.from({length: 10}, (_, i) => `https://source.unsplash.com/800x600/?${encodeURIComponent(hotel.name + ' hotel')}+${i}`);
+            map[hotel.name] = [...gp, ...up].slice(0, 20);
+            hotel.photoUrl = gp[0] || up[0];
+          }
+        } catch {}
+      }
+      if (Object.keys(map).length > 0) { setStopPhotos(map); setPlan({...plan}); }
+    };
+    fetchPhotos();
+  }, [plan?.days?.[0]?.stops?.[0]?.placeName]);
   const [routeStrategy, setRouteStrategy] = useState('FASTEST');
   const [originSuggestions, setOriginSuggestions] = useState<typeof MY_CITIES>([]);
   const [showOriginSuggestions, setShowOriginSuggestions] = useState(false);
@@ -1226,20 +1267,18 @@ export default function Page() {
     const maxBudget = diffDays * size * 8000;
     if (fb < minBudget) { setError(`Minimum budget RM ${minBudget.toLocaleString()} for ${size}p × ${diffDays} days. Increase budget or reduce days/people.`); setLoading(false); return; }
     if (fb > maxBudget) { setError(`Maximum budget is RM ${maxBudget.toLocaleString()}.`); setLoading(false); return; }
-    const controller = new AbortController();
-    const timeout = setTimeout(() => controller.abort(), 90000);
     try {
       const res = await fetch('/api/weekend-planner/generate', {
         method: 'POST', headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ destination: dest, destinationLat: destLat, destinationLng: destLng, originLat, originLng, tripDistance, startDate: sD, endDate: eD, budget: fb, transportMode: aiTransport?.mode || 'DRIVING', groupType: group, travelStyles: styles, specialPreferences: prefs, groupSize: size }),
-        signal: controller.signal,
       });
       const data = await res.json();
-      if (data.error) setError(data.error); else setPlan(data.data || data);
+      if (data.error) { setError(data.error); setLoading(false); return; }
+      setPlan(data.data || data);
+      setError('');
     } catch (e: any) {
       setError('Unable to generate. Please try again.');
     }
-    clearTimeout(timeout);
     setLoading(false);
   };
 
@@ -1250,7 +1289,7 @@ export default function Page() {
         <span className="inline-flex items-center gap-1.5 rounded-full bg-[#FDF6ED] px-4 py-1.5 text-[11px] font-bold text-[#7B5E3B] uppercase tracking-wider mb-3">
           <Sparkles className="h-3 w-3" /> AI-Powered Travel
         </span>
-        <h1 className="text-[36px] font-extrabold text-[#1A1A1A] leading-[1.1] tracking-[-0.02em]">Plan your<br /><span className="gradient-text">weekend</span></h1>
+        <h1 className="text-[36px] font-extrabold text-[#1A1A1A] leading-[1.1] tracking-[-0.02em]">Plan your<br /><span className="gradient-text">weekend</span> <span className="text-[10px] text-gray-300 align-top">v3.0</span></h1>
         <p className="text-[15px] text-[#6B7280] mt-2">A complete itinerary in seconds. Worldwide.</p>
       </div>
 
@@ -1266,7 +1305,7 @@ export default function Page() {
             </div>
             <div className="flex-1">
               <p className="text-[11px] font-bold text-[#8B7355] mb-1">📅 End (max 8 days)</p>
-              <input type="date" value={eD} min={sD} onChange={e => {
+              <input type="date" value={eD} min={sD || new Date().toISOString().split('T')[0]} onChange={e => {
                 const start=new Date(sD); const end=new Date(e.target.value);
                 const diff=Math.ceil((end.getTime()-start.getTime())/86400000)+1;
                 if(diff<=8) setED(e.target.value); else toast.error('Max 8 days, 7 nights');
@@ -1487,51 +1526,141 @@ export default function Page() {
         {/* TIMELINE */}
         {tab === 'timeline' && (
           <div className="px-5 pt-4 space-y-4">
-            <div className="flex gap-2">
+            {/* Day selector pills */}
+            <div className="flex gap-2 overflow-x-auto pb-2">
               {plan.days?.map((d: any, i: number) => (
-                <button key={i} onClick={() => setDayIdx(i)} className={cn('flex-1 rounded-xl border-2 py-3 text-center transition-all', dayIdx === i ? 'border-[#7B5E3B] bg-[#FDF6ED] text-[#7B5E3B]' : 'border-[#E5E7EB] bg-white text-[#1A1A1A] hover:border-[#7B5E3B]/30')}>
-                  <div className="text-sm font-bold">Day {d.dayNumber}</div><div className="text-[11px] opacity-60 mt-0.5">{new Date(d.date).toLocaleDateString('en', { weekday: 'short', month: 'short', day: 'numeric' })}</div>
+                <button key={i} onClick={() => setDayIdx(i)} className={cn('flex-shrink-0 rounded-2xl border-2 px-5 py-3 text-left transition-all min-w-[120px]', dayIdx === i ? 'border-[#7B5E3B] bg-[#FDF6ED] shadow-md shadow-amber-100' : 'border-[#E5E7EB] bg-white hover:border-[#7B5E3B]/30')}>
+                  <div className="text-[10px] font-bold text-[#8B7355] uppercase tracking-wider">Day {d.dayNumber}</div>
+                  <div className="text-[13px] font-extrabold text-[#1A1A1A] mt-0.5">{new Date(d.date).toLocaleDateString('en', { weekday: 'short', month: 'short', day: 'numeric' })}</div>
+                  <div className="text-[10px] text-[#8B7355] mt-0.5">{d.stops?.length || 0} stops</div>
                 </button>
               ))}
             </div>
+
             {day && (
               <div>
-                <h3 className="text-lg font-extrabold text-[#1A1A1A] mb-0.5">{day.theme}</h3>
-                <p className="text-[13px] text-[#6B7280] mb-5">🌤️ {day.weather?.condition ?? 'Partly cloudy'} · {day.weather?.tempMin ?? 26}°–{day.weather?.tempMax ?? 32}°</p>
-                {day.stops?.map((s: any, idx: number) => (
-                  <div key={idx} className="cursor-pointer enter" style={{ animationDelay: `${idx * 0.06}s` }} onClick={() => { setSelStop(s); setPhotoIdx(0); setNearbyPlaces([]);
-                    const nLat = s.lat || destLat || 3.139; const nLng = s.lng || destLng || 101.6869;
-                    fetch(`/api/places/nearby?lat=${nLat}&lng=${nLng}&radius=3000&limit=5`)
-                      .then(r => r.json()).then(d => setNearbyPlaces((d.data||[]).filter((p:any) => p.name !== s.placeName).slice(0,3))).catch(()=>{});
-                  }}>
-                    <div className="flex gap-0">
-                      <div className="flex flex-col items-center mr-4">
-                        <div className={cn('timeline-dot', s.isHiddenGem ? 'bg-purple-400' : s.isPhotoSpot ? 'bg-sky-400' : 'bg-[#7B5E3B]')} />
-                        {idx < (day.stops?.length ?? 0) - 1 && <div className="timeline-line flex-1 mt-1.5 mb-1.5" />}
+                {/* Day header */}
+                <div className="bg-gradient-to-r from-[#FDF6ED] to-white rounded-2xl p-4 mb-5 border border-[#E8D5C4]/50">
+                  <h3 className="text-[18px] font-extrabold text-[#1A1A1A]">{day.theme}</h3>
+                  <div className="flex items-center gap-3 mt-1.5 text-[12px] text-[#6B7280]">
+                    <span>🌤️ {day.weather?.condition ?? 'Partly cloudy'} · {day.weather?.tempMin ?? 26}°–{day.weather?.tempMax ?? 32}°</span>
+                    <span className="text-[10px] px-2 py-0.5 bg-white rounded-full border border-[#E5E7EB]">{day.weather?.rainChance ?? 30}% rain</span>
+                    <span className="text-[10px] px-2 py-0.5 bg-white rounded-full border border-[#E5E7EB]">💧 {day.weather?.humidity ?? 75}%</span>
+                  </div>
+                  {day.breakfastSpot && (
+                    <div className="flex gap-3 mt-2 text-[11px] text-[#8B7355]">
+                      <span>🍳 {day.breakfastSpot}</span>
+                      <span>🍽️ {day.lunchSpot}</span>
+                      <span>🌙 {day.dinnerSpot}</span>
+                    </div>
+                  )}
+                </div>
+
+                {/* Timeline stops */}
+                <div className="relative">
+                  {/* Vertical line */}
+                  <div className="absolute left-[19px] top-3 bottom-3 w-0.5 bg-[#E5E7EB]" />
+
+                  {day.stops?.map((s: any, idx: number) => (
+                    <div key={idx} className="relative flex gap-4 mb-4 animate-in fade-in slide-in-from-bottom-2"
+                      style={{ animationDelay: `${idx * 80}ms` }}
+                      onClick={() => { setSelStop(s); setPhotoIdx(0); setNearbyPlaces([]);
+                        const nLat = s.lat || destLat || 3.139; const nLng = s.lng || destLng || 101.6869;
+                        fetch(`/api/places/nearby?lat=${nLat}&lng=${nLng}&radius=3000&limit=5`)
+                          .then(r => r.json()).then(d => setNearbyPlaces((d.data||[]).filter((p:any) => p.name !== s.placeName).slice(0,3))).catch(()=>{});
+                      }}>
+                      {/* Timeline marker */}
+                      <div className="relative z-10 flex-shrink-0">
+                        <div className={cn('w-[38px] h-[38px] rounded-full flex items-center justify-center text-white text-[13px] font-extrabold shadow-md',
+                          s.isHiddenGem ? 'bg-purple-500 ring-4 ring-purple-100' : s.isPhotoSpot ? 'bg-sky-500 ring-4 ring-sky-100' : 'bg-[#7B5E3B] ring-4 ring-amber-50')}>
+                          {idx + 1}
+                        </div>
                       </div>
-                      <div className="flex-1 hero-card mb-5 bg-white border border-[#E5E7EB]">
-                        {s.photoUrl ? <img src={s.photoUrl} className="w-full h-44 object-cover cursor-pointer hover:scale-105 transition-transform" alt="" onClick={(e: any) => { e.stopPropagation(); setViewImages([s.photoUrl]); }} /> : <div className="w-full h-28 bg-[#FDF6ED] flex items-center justify-center text-4xl">{s.emoji ?? '📍'}</div>}
-                        <div className="p-4">
-                          <div className="flex items-center justify-between mb-1">
-                            <span className="text-[14px] font-bold text-[#1A1A1A]">{s.placeName}</span>
-                            <div className="flex gap-1">{s.isHiddenGem && <span className="text-[9px] font-bold bg-purple-100 text-purple-600 rounded-full px-2 py-0.5">💎 Gem</span>}{s.isPhotoSpot && <span className="text-[9px] font-bold bg-sky-100 text-sky-600 rounded-full px-2 py-0.5">📸</span>}</div>
+
+                      {/* Stop card */}
+                      <div className="flex-1 bg-white rounded-2xl border border-[#E5E7EB] shadow-sm hover:shadow-md transition-shadow overflow-hidden cursor-pointer">
+                        {/* Photo */}
+                        {s.photoUrl ? (
+                          <div className="relative h-48 overflow-hidden" onClick={async (e: any) => { e.stopPropagation(); const p = stopPhotos[s.placeName]; if (!p?.length || p.length < 5) { try { const sr = await fetch(`/api/places/search?q=${encodeURIComponent(s.placeName + ' ' + (plan?.destination || ''))}&lat=${s.lat}&lng=${s.lng}&limit=1`); const sd = await sr.json(); const pid = sd.data?.[0]?.id; if (pid) { const dr = await fetch(`/api/places/${pid}`); const dd = await dr.json(); if (dd.data?.photos?.length > 5) { setStopPhotos(prev => ({...prev, [s.placeName]: dd.data.photos.slice(0, 20)})); setViewImages(dd.data.photos.slice(0, 20)); return; } } } catch {} } setViewImages(p?.length ? p : [s.photoUrl]); }}>
+                            <img src={s.photoUrl} className="w-full h-full object-cover hover:scale-105 transition-transform duration-500" alt="" loading="lazy" />
+                            <div className="absolute inset-0 bg-gradient-to-t from-black/30 to-transparent" />
+                            <span className="absolute bottom-3 right-3 bg-black/60 backdrop-blur rounded-full px-2.5 py-1 text-[10px] font-bold text-white flex items-center gap-1">
+                              <Camera className="h-3 w-3" /> {stopPhotos[s.placeName]?.length || 1}
+                            </span>
+                            {/* Time badge */}
+                            <span className="absolute top-3 left-3 bg-black/50 backdrop-blur rounded-full px-2.5 py-1 text-[11px] font-extrabold text-white flex items-center gap-1">
+                              <Clock className="h-3 w-3" /> {s.time}
+                            </span>
+                            {/* Category badge */}
+                            <span className="absolute top-3 right-3 bg-white/90 backdrop-blur rounded-full px-2.5 py-0.5 text-[10px] font-bold text-[#7B5E3B]">
+                              {s.category === 'FOOD' ? '🍜' : s.category === 'CAFE' ? '☕' : s.category === 'TOURIST_ATTRACTION' ? '🏛️' : s.category === 'NATURE' ? '🌿' : s.category === 'HOTEL' ? '🏨' : s.category === 'NIGHTLIFE' ? '🌙' : '📍'} {s.category?.replace(/_/g, ' ')}
+                            </span>
                           </div>
-                          <p className="text-[13px] text-[#6B7280] leading-relaxed mb-2">{s.description}</p>
-                          {s.mustTry && <p className="text-[12px] text-[#C4956A] bg-[#FDF6ED] rounded-lg px-2.5 py-1.5 mb-2 font-medium flex items-center gap-1"><span>⭐</span> Must try: {s.mustTry}</p>}
-                          <div className="flex items-center gap-4 text-[12px] text-[#9CA3AF] font-medium">
-                            <span className="flex items-center gap-1"><Clock className="h-3 w-3 text-[#7B5E3B]" /> {s.time}</span>
-                            {s.rating > 0 && <span className="flex items-center gap-0.5 text-[#1A1A1A]"><Star className="h-3 w-3 fill-amber-400 text-amber-400" /> {s.rating}</span>}
-                            <span>{s.transportFromPrev?.mode === 'WALKING' ? '🚶' : '🚕'} {s.transportFromPrev?.mode}</span>
-                            <span className="ml-auto text-[14px] font-bold text-[#7B5E3B]">RM {Math.round((s.estimatedSpend + (s.entryFee ?? 0)) * (plan.groupSize||2))} <span className="text-[10px] text-[#8B7355] font-medium">/ {plan.groupSize||2}p</span></span>
+                        ) : (
+                          <div className="h-32 bg-gradient-to-br from-[#FDF6ED] to-[#F0E6D2] flex items-center justify-center text-5xl">{s.emoji ?? '📍'}</div>
+                        )}
+
+                        {/* Card content */}
+                        <div className="p-4">
+                          <div className="flex items-start justify-between gap-2 mb-2">
+                            <h4 className="text-[15px] font-extrabold text-[#0E0E0E] leading-tight">{s.placeName}</h4>
+                            <div className="flex gap-1 flex-shrink-0">
+                              {s.isHiddenGem && <span className="text-[9px] font-bold bg-purple-100 text-purple-600 rounded-full px-2 py-0.5">💎</span>}
+                              {s.isPhotoSpot && <span className="text-[9px] font-bold bg-sky-100 text-sky-600 rounded-full px-2 py-0.5">📸</span>}
+                            </div>
+                          </div>
+
+                          <div className="flex items-center gap-2 mb-2 text-[11px]">
+                            {s.rating > 0 && (
+                              <span className="flex items-center gap-0.5 bg-amber-50 text-amber-700 rounded-full px-2 py-0.5 font-bold">
+                                <Star className="h-3 w-3 fill-amber-400 text-amber-400" /> {s.rating}
+                              </span>
+                            )}
+                            <span className="text-gray-400">{s.duration}</span>
+                            {s.transportFromPrev?.mode && (
+                              <span className="text-gray-400">{s.transportFromPrev.mode === 'WALKING' ? '🚶' : '🚗'} {s.transportFromPrev.mode}</span>
+                            )}
+                          </div>
+
+                          <p className="text-[12px] text-[#6B7280] leading-relaxed mb-3">{s.description}</p>
+
+                          {s.mustTry && (
+                            <div className="bg-amber-50 border border-amber-100 rounded-xl px-3 py-2 mb-3 flex items-start gap-2">
+                              <span className="text-amber-500 text-sm">⭐</span>
+                              <div>
+                                <p className="text-[10px] font-bold text-amber-600 uppercase tracking-wider">Must Try</p>
+                                <p className="text-[12px] font-semibold text-[#7B5E3B]">{s.mustTry}</p>
+                              </div>
+                            </div>
+                          )}
+
+                          <div className="flex items-center justify-between pt-2 border-t border-[#F0EDE4]">
+                            <div className="flex items-center gap-1 text-[11px] text-gray-400">
+                              <Clock className="h-3 w-3" /> {s.time} · {s.duration}
+                            </div>
+                            <div className="text-right">
+                              <span className="text-[16px] font-extrabold text-[#7B5E3B]">RM {Math.round((s.estimatedSpend + (s.entryFee ?? 0)) * (plan.groupSize || 2))}</span>
+                              <span className="text-[10px] text-[#8B7355] ml-1">/ {plan.groupSize || 2}p</span>
+                            </div>
                           </div>
                         </div>
                       </div>
                     </div>
+                  ))}
+                </div>
+
+                {/* Day summary */}
+                <div className="bg-white rounded-2xl border border-[#E5E7EB] p-4 mt-4">
+                  <div className="flex justify-between text-[13px]">
+                    <div>
+                      <p className="text-[10px] font-bold text-[#8B7355] uppercase tracking-wider mb-1">Day Summary</p>
+                      <span className="font-extrabold text-[#7B5E3B]">RM {day.dayTotalCost}</span>
+                    </div>
+                    <div className="text-right">
+                      <p className="text-[10px] font-bold text-[#8B7355] uppercase tracking-wider mb-1">Distance & Time</p>
+                      <span className="font-semibold text-[#1A1A1A]">{(day.dayTotalDistance / 1000).toFixed(1)} km · {day.dayTotalTime} min</span>
+                    </div>
                   </div>
-                ))}
-                <div className="flex justify-between text-[13px] text-[#6B7280] pt-4 border-t border-[#E5E7EB]">
-                  <span>Day total <strong className="text-[#7B5E3B]">RM {day.dayTotalCost}</strong></span>
-                  <span>{(day.dayTotalDistance / 1000).toFixed(1)} km · {day.dayTotalTime} min</span>
                 </div>
               </div>
             )}
@@ -1841,18 +1970,45 @@ export default function Page() {
             )}
             {plan.whereToStay?.length > 0 && (
               <div className="bg-white rounded-2xl p-5 border border-indigo-100 shadow-sm">
-                <p className="text-[10px] font-bold text-indigo-500 uppercase tracking-wider mb-3">🏨 Where to Stay in {plan.destination}</p>
-                <div className="space-y-2">
+                <p className="text-[10px] font-bold text-indigo-500 uppercase tracking-wider mb-3">🏨 Where to Stay in {plan.destination} ({plan.whereToStay.length} hotels)</p>
+                <div className="space-y-3">
                   {plan.whereToStay.map((h: any, i: number) => (
-                    <div key={i} className="flex items-start gap-3 p-3 bg-indigo-50/50 rounded-xl">
-                      <span className="text-2xl">{h.type === 'luxury' ? '🏩' : h.type === 'mid' ? '🏨' : '🏠'}</span>
-                      <div className="flex-1">
-                        <div className="flex items-center justify-between">
-                          <p className="text-[13px] font-extrabold text-[#0E0E0E]">{h.name}</p>
-                          <span className="text-[11px] font-bold text-indigo-500">RM {h.pricePerNight}/night</span>
+                    <div key={i} className="bg-white rounded-xl border border-gray-200 shadow-sm overflow-hidden hover:shadow-md transition-shadow cursor-pointer" onClick={() => setSelHotel(h)}>
+                      <div className="flex">
+                        {/* Photo */}
+                        <div className="w-28 h-28 flex-shrink-0 cursor-pointer" onClick={() => { const p = stopPhotos[h.name]; setViewImages(p?.length ? p : [h.photoUrl]); }}>
+                          {h.photoUrl ? (
+                            <img src={h.photoUrl} className="w-full h-full object-cover" alt={h.name} />
+                          ) : (
+                            <div className="w-full h-full bg-gradient-to-br from-indigo-100 to-purple-100 flex items-center justify-center text-3xl">
+                              {h.type === 'luxury' ? '🏩' : h.type === 'mid' ? '🏨' : '🏠'}
+                            </div>
+                          )}
                         </div>
-                        <p className="text-[11px] text-[#6B7280] mt-0.5">{h.description}</p>
-                        {h.distance && <p className="text-[10px] text-indigo-400 mt-0.5">📍 {h.distance}</p>}
+                        {/* Info */}
+                        <div className="flex-1 p-3 min-w-0">
+                          <div className="flex items-start justify-between gap-1">
+                            <p className="text-[13px] font-extrabold text-[#0E0E0E] leading-tight truncate">{h.name}</p>
+                            <span className={cn("text-[10px] font-bold px-2 py-0.5 rounded-full flex-shrink-0", h.type==='luxury'?'bg-purple-100 text-purple-600':h.type==='mid'?'bg-blue-100 text-blue-600':'bg-green-100 text-green-600')}>{h.type}</span>
+                          </div>
+                          {/* Stars + Rating */}
+                          <div className="flex items-center gap-1.5 mt-1">
+                            {h.starRating > 0 && <span className="text-[11px]">{'⭐'.repeat(Math.min(5, h.starRating || 0))}</span>}
+                            {h.rating > 0 && (
+                              <span className="text-[11px] font-bold bg-amber-50 text-amber-700 rounded px-1.5 py-0.5">{h.rating}</span>
+                            )}
+                          </div>
+                          <p className="text-[11px] text-[#6B7280] mt-1 line-clamp-2 leading-relaxed">{h.description}</p>
+                          {h.amenities && (
+                            <p className="text-[10px] text-gray-400 mt-1 truncate">{String(h.amenities).replace(/,/g, ' · ')}</p>
+                          )}
+                        </div>
+                        {/* Price */}
+                        <div className="flex-shrink-0 p-3 flex flex-col items-end justify-center border-l border-gray-100">
+                          <p className="text-[10px] text-gray-400">from</p>
+                          <p className="text-[16px] font-extrabold text-indigo-600">RM{h.pricePerNight}</p>
+                          <p className="text-[9px] text-gray-400">/night</p>
+                        </div>
                       </div>
                     </div>
                   ))}
@@ -2881,9 +3037,49 @@ export default function Page() {
         );
       })()}
     
-      {viewImages && viewImages.length > 0 && (
-        <ImageViewer images={viewImages} onClose={() => setViewImages(null)} alt="Stop photo" />
+      {/* 🏨 Hotel Detail Modal */}
+      {selHotel && (
+        <div className="fixed inset-0 z-[9999] flex items-end bg-black/50 backdrop-blur-md" onClick={() => setSelHotel(null)}>
+          <div className="w-full max-h-[90vh] bg-white rounded-t-[24px] overflow-y-auto" onClick={e => e.stopPropagation()}>
+            <div className="sticky top-0 bg-white pt-3 pb-2 flex justify-center z-10"><div className="w-10 h-1 rounded-full bg-gray-300"/></div>
+            {/* Photo Gallery */}
+            <div className="relative h-56 bg-gray-100 cursor-pointer" onClick={() => { const p = stopPhotos[selHotel.name]; setViewImages(p?.length ? p : [selHotel.photoUrl]); }}>
+              {selHotel.photoUrl ? <img src={selHotel.photoUrl} className="w-full h-full object-cover" alt="" /> : <div className="w-full h-full flex items-center justify-center text-4xl bg-gradient-to-br from-indigo-100 to-purple-100">🏨</div>}
+              <span className="absolute bottom-2 right-2 bg-black/50 backdrop-blur rounded-full px-2 py-0.5 text-[10px] font-bold text-white">📷 {stopPhotos[selHotel.name]?.length || 0} photos</span>
+            </div>
+            <div className="p-5 space-y-4 pb-8">
+              <div>
+                <div className="flex items-center gap-2 mb-1">
+                  <span className={cn("text-[10px] font-bold px-2 py-0.5 rounded-full", selHotel.type==='luxury'?'bg-purple-100 text-purple-600':selHotel.type==='mid'?'bg-blue-100 text-blue-600':'bg-green-100 text-green-600')}>{selHotel.type}</span>
+                  {selHotel.starRating > 0 && <span className="text-[12px]">{'⭐'.repeat(Math.min(5, selHotel.starRating||0))}</span>}
+                </div>
+                <h2 className="text-[22px] font-extrabold text-[#0E0E0E]">{selHotel.name}</h2>
+                {selHotel.rating > 0 && <div className="flex items-center gap-1 mt-1"><Star className="h-4 w-4 fill-amber-400 text-amber-400"/><span className="text-[14px] font-extrabold">{selHotel.rating}</span><span className="text-[12px] text-gray-400">/5</span></div>}
+              </div>
+              <div className="grid grid-cols-2 gap-3">
+                <div className="bg-indigo-50 rounded-xl p-3 text-center"><p className="text-[20px] font-extrabold text-indigo-600">RM{selHotel.pricePerNight}</p><p className="text-[10px] text-gray-500">per night</p></div>
+                <div className="bg-green-50 rounded-xl p-3 text-center"><p className="text-[20px] font-extrabold text-green-600">RM{Math.round(selHotel.pricePerNight*2)}</p><p className="text-[10px] text-gray-500">2 nights est.</p></div>
+              </div>
+              <div>
+                <p className="text-[10px] font-bold text-gray-400 uppercase tracking-wider mb-1">About</p>
+                <p className="text-[13px] text-[#6B7280] leading-relaxed">{selHotel.description || 'No description available'}</p>
+              </div>
+              {selHotel.amenities && (
+                <div>
+                  <p className="text-[10px] font-bold text-gray-400 uppercase tracking-wider mb-2">Amenities</p>
+                  <div className="flex flex-wrap gap-1.5">
+                    {String(selHotel.amenities).split(',').map((a: string) => (
+                      <span key={a} className="text-[10px] font-medium bg-gray-100 text-gray-600 rounded-full px-2.5 py-1">{a.trim()}</span>
+                    ))}
+                  </div>
+                </div>
+              )}
+              <button onClick={() => setSelHotel(null)} className="w-full py-3 rounded-xl bg-gray-100 text-gray-600 text-sm font-bold">Close</button>
+            </div>
+          </div>
+        </div>
       )}
+      {viewImages && <ImageViewer images={viewImages} onClose={() => setViewImages(null)} alt="Stop photo" />}
 </div>
   );
 }

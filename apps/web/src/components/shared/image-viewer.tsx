@@ -12,7 +12,7 @@ interface ImageViewerProps {
 /** Full-screen image viewer — tap any place photo to view it enlarged, with carousel navigation */
 export function ImageViewer({ images, initialIndex = 0, onClose, alt = 'Photo' }: ImageViewerProps) {
   const [idx, setIdx] = useState(initialIndex);
-  const filtered = images.filter(Boolean);
+  const filtered = (images || []).filter(Boolean);
 
   useEffect(() => {
     const handler = (e: KeyboardEvent) => {
