@@ -97,14 +97,15 @@ export default function DatingPlannerPage() {
   const [activityThumbs, setActivityThumbs] = useState<Record<string,string>>({});
   const [viewImages, setViewImages] = useState<string[] | null>(null);
 
-  // Auto-load REAL Google photos for activity cards + full photo gallery
+  // Auto-load REAL Google photos + rich details for activity cards
   const [activityPhotos, setActivityPhotos] = useState<Record<string, string[]>>({});
+  const [activityDetails, setActivityDetails] = useState<Record<string, any>>({});
 
   useEffect(() => {
     if (!plan?.activities?.length) return;
     plan.activities.forEach((a: any) => {
       const name = a.placeName;
-      // Fetch from Google Places Search to get real photos
+      // Fetch from Google Places to get real photos + details
       fetch(`/api/places/search?q=${encodeURIComponent(name + ' ' + (plan.city || 'Kuala Lumpur'))}&lat=${a.lat||3.139}&lng=${a.lng||101.6869}&limit=1`)
         .then(r => r.json())
         .then(d => {
@@ -115,9 +116,21 @@ export default function DatingPlannerPage() {
               setActivityThumbs(prev => ({ ...prev, [name]: photos[0] }));
               setActivityPhotos(prev => ({ ...prev, [name]: photos }));
             }
+            // Save rich detail
+            if (place.address || place.rating) {
+              setActivityDetails(prev => ({ ...prev, [name]: { address: place.address, rating: place.rating, reviewCount: place.userRatingsTotal, openNow: place.openNow, priceLevel: place.priceLevel } }));
+            }
           }
         }).catch(() => {});
-      // Fallback
+      // Fetch full Place Details for richer info
+      fetch(`/api/places/search?q=${encodeURIComponent(name + ' ' + (plan.city || 'Kuala Lumpur'))}&lat=${a.lat||3.139}&lng=${a.lng||101.6869}&limit=1`)
+        .then(r => r.json()).then(d => {
+          const pid = d.data?.[0]?.id;
+          if (pid) fetch(`/api/places/${pid}`).then(r => r.json()).then(dd => {
+            if (dd.data) setActivityDetails(prev => ({ ...prev, [name]: dd.data }));
+          }).catch(()=>{});
+        }).catch(()=>{});
+      // Fallback thumbnail
       const fallback = `https://source.unsplash.com/600x400/?${encodeURIComponent(name + ' ' + (a.category || 'restaurant'))}`;
       setActivityThumbs(prev => prev[name] ? prev : { ...prev, [name]: fallback });
     });
@@ -389,6 +402,16 @@ export default function DatingPlannerPage() {
                   <span className="text-[11px] font-bold text-pink-500">{a.time || a.timeSlot}</span>
                 </div>
                 <p className="text-[10px] text-gray-500">{a.category || a.activityType} · {a.duration || a.durationMinutes} · RM {(a.cost || a.estimatedCost) || 0}</p>
+                {/* Google Place rich detail inline */}
+                {activityDetails[a.placeName] && (
+                  <div className="flex items-center gap-2 mt-0.5 text-[10px] text-gray-400">
+                    {activityDetails[a.placeName].rating > 0 && <span className="flex items-center gap-0.5"><Star className="h-3 w-3 fill-amber-400 text-amber-400"/>{activityDetails[a.placeName].rating.toFixed(1)}</span>}
+                    {activityDetails[a.placeName].reviewCount > 0 && <span>({activityDetails[a.placeName].reviewCount})</span>}
+                    {activityDetails[a.placeName].openNow !== undefined && <span className={activityDetails[a.placeName].openNow?'text-green-500 font-bold':'text-red-400'}>{activityDetails[a.placeName].openNow?'🟢 Open':'🔴 Closed'}</span>}
+                    {activityDetails[a.placeName].priceLevel !== undefined && <span>{'💰'.repeat(activityDetails[a.placeName].priceLevel + 1)}</span>}
+                  </div>
+                )}
+                {activityDetails[a.placeName]?.address && <p className="text-[9px] text-gray-400 mt-0.5 truncate">📍 {activityDetails[a.placeName].address}</p>}
                 <p className="text-[11px] text-gray-600 mt-1 line-clamp-3">{a.description}</p>
                 {a.tip && <p className="text-[10px] text-pink-500 bg-pink-50 rounded-lg px-2 py-1 mt-1.5 italic">💡 {a.tip}</p>}
                 {a.dressCode && <p className="text-[9px] text-gray-400 mt-1">👔 {a.dressCode}{a.reservationNeeded ? ' · 📞 Reservation recommended' : ''}</p>}
@@ -1126,9 +1149,51 @@ export default function DatingPlannerPage() {
             const uid = localStorage.getItem('userId') || '';
             if (!plan) return;
             const trips = JSON.parse(localStorage.getItem('saved_trips') || '[]');
-            trips.unshift({ title: plan.title, destination: plan.city, type: 'date', totalCost: plan.totalCost, activities: plan.activities, savedAt: new Date().toISOString() });
+            // Normalize to same structure as weekend-planner for consistent display in My Trips & Couple
+            const savedDate = {
+              id: 'date_' + Date.now(),
+              title: plan.title || `${plan.city} Date`,
+              destination: plan.city,
+              type: 'date',
+              groupType: 'COUPLE',
+              walletType: 'COUPLE',
+              totalCost: plan.totalCost || 0,
+              startDate: plan.date || '',
+              endDate: plan.date || '',
+              days: 1,
+              planDays: [{
+                dayNumber: 1,
+                date: plan.date || '',
+                theme: plan.title || 'Date',
+                stops: (plan.activities || []).map((a: any, i: number) => ({
+                  placeName: a.name || a.placeName || a.title || '',
+                  time: a.time || `${String(8 + i * 2).padStart(2, '0')}:00`,
+                  duration: a.duration || '1.5h',
+                  description: a.description || a.reason || '',
+                  category: a.category || a.type || 'DATE',
+                  emoji: a.emoji || '💕',
+                  estimatedSpend: a.estimatedSpend || a.cost || 50,
+                  isHiddenGem: false,
+                  isPhotoSpot: true,
+                })),
+              }],
+              planStops: (plan.activities || []).map((a: any, i: number) => ({
+                ...a,
+                day: 1,
+                theme: plan.title || 'Date',
+                placeName: a.name || a.placeName || a.title || '',
+              })),
+              budgetBreakdown: plan.budgetBreakdown || { total: plan.totalCost || 0 },
+              totalStops: plan.activities?.length || 0,
+              groupSize: 2,
+              activities: plan.activities,
+              fullPlan: plan,
+              userId: uid,
+              savedAt: new Date().toISOString(),
+            };
+            trips.unshift(savedDate);
             localStorage.setItem('saved_trips', JSON.stringify(trips.slice(0, 50)));
-            toast.success('Date plan saved!');
+            toast.success('💕 Date saved! View in My Trips & Couple Space');
           }} className="flex-1 py-3.5 rounded-2xl bg-white border-2 border-pink-200 text-pink-500 text-sm font-extrabold">💾 Save Date</button>
         </div>
       </div>

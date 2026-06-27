@@ -2053,6 +2053,7 @@ export default function Page() {
               userId: uid,
               title: plan.title || `${plan.destination} Weekend`,
               destination: plan.destination,
+              type: 'trip',
               days: plan.days?.length || 2,
               totalCost: Math.round(plan.totalCost || plan.budget),
               startDate: plan.startDate || sD,
@@ -2072,7 +2073,7 @@ export default function Page() {
               const trips = JSON.parse(localStorage.getItem('saved_trips') || '[]');
               trips.unshift({ ...tripData, id: 'trip_' + Date.now(), savedAt: new Date().toISOString() });
               localStorage.setItem('saved_trips', JSON.stringify(trips.slice(0, 50)));
-              toast.success('✅ Trip saved! View in My Trips');
+              toast.success(group === 'COUPLE' ? '💑 Couple trip saved! View in My Trips & Couple Space' : '✅ Trip saved! View in My Trips');
             } catch { toast.error('❌ Save failed'); }
           }} className="btn-primary flex-1 text-sm py-3.5">💾 Save</button>
         </div>

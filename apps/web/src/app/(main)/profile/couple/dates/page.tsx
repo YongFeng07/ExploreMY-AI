@@ -11,30 +11,19 @@ export default function CoupleDatesPage() {
   const [history, setHistory] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [tab, setTab] = useState<'planned' | 'history'>('planned');
-  const token = typeof window !== 'undefined' ? '' : '';
-  const uid = typeof window !== 'undefined' ? '' || '' : '';
 
-  const load = async () => {
+  const load = () => {
     setLoading(true);
-    const headers: any = {};
-    if (token) headers['Authorization'] = `Bearer ${token}`;
     try {
-      const r = await fetch(`/api/auth/me/trips?userId=${uid}`, { headers });
-      const d = await r.json();
-      const all = (d.data || []);
-      // Filter: date plans (from /date) AND couple weekend plans
+      const all: any[] = JSON.parse(localStorage.getItem('saved_trips') || '[]');
+      // Filter: only COUPLE trips (same data source as My Trips & Couple Dashboard)
       const coupleTrips = all.filter((t: any) => {
-        const pd = t.planData || {};
-        const fp = pd.fullPlan;
         // Top-level groupType (set by save)
-        if (pd.groupType === 'COUPLE' || pd.walletType === 'COUPLE') return true;
+        if (t.groupType === 'COUPLE' || t.walletType === 'COUPLE') return true;
         // FullPlan groupType (from weekend planner)
-        if (fp?.groupType === 'COUPLE' || fp?.walletType === 'COUPLE') return true;
-        // Date planner: has city + activities (always couple)
-        if (fp?.city && fp?.activities) return true;
-        // Keywords fallback
-        const title = (t.title || '').toLowerCase();
-        if (title.includes('date') || title.includes('couple') || title.includes('romantic') || title.includes('💕')) return true;
+        if (t.fullPlan?.groupType === 'COUPLE' || t.fullPlan?.walletType === 'COUPLE') return true;
+        // Date planner: type === 'date' is always couple
+        if (t.type === 'date') return true;
         return false;
       });
       setDates(coupleTrips.filter((t: any) => !t.completed));
@@ -45,10 +34,11 @@ export default function CoupleDatesPage() {
   useEffect(() => { load(); }, []);
 
   const openTrip = (t: any) => {
-    const fp = t.planData?.fullPlan;
+    // Normalized save structure: fullPlan is at top level
+    const fp = t.fullPlan || t.planData?.fullPlan;
     if (fp) {
       sessionStorage.setItem('savedPlan', JSON.stringify(fp));
-      // Date planner: has city + activities
+      // Date: has city + activities, no destination
       if (fp.city && fp.activities && !fp.destination) {
         router.push('/date?view=saved');
       } else {

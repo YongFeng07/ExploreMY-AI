@@ -12,17 +12,27 @@ export default function CoupleDashboard() {
   const couple = loadCouple();
   const [partner, setPartner] = useState<any>(couple.partner || null);
   const [anniv, setAnniv] = useState<any>(couple.anniversary || null);
-  const [timeline, setTimeline] = useState<any[]>(couple.timeline || []);
+  // Load saved trips — filter: ONLY couple-relevant trips for Couple Space
+  const allSavedTrips = (() => { try { return JSON.parse(localStorage.getItem('saved_trips') || '[]'); } catch { return []; } })();
+  const savedTrips = allSavedTrips.filter((t: any) =>
+    t.groupType === 'COUPLE' || t.walletType === 'COUPLE' || t.type === 'date' ||
+    (t.fullPlan?.groupType === 'COUPLE') || (t.fullPlan?.walletType === 'COUPLE')
+  );
+  const coupleTimeline = couple.timeline || [];
+  const allTimeline = [...coupleTimeline, ...savedTrips.map((t: any) => ({ ...t, id: t.id || t.savedAt, title: t.title || 'Trip', date: t.savedAt || t.startDate, shared: true, type: t.type || 'trip' }))];
+  const [timeline, setTimeline] = useState<any[]>(allTimeline);
   const [gallery, setGallery] = useState<any[]>(couple.gallery || []);
-  // Generate compatibility from couple data
+  // Generate compatibility from real data
+  const uniqueCities = new Set(savedTrips.map((t: any) => t.destination?.toLowerCase()).filter(Boolean));
+  const coupleEvents = coupleTimeline.length;
   const compat = partner ? {
-    overall: Math.min(95, 65 + (anniv?.years || 0) * 5 + timeline.length * 3),
-    travelScore: 70 + Math.floor(Math.random() * 25),
-    journalScore: 60 + Math.floor(Math.random() * 30),
-    photoScore: 75 + Math.floor(Math.random() * 20),
-    sharedCities: timeline.filter(t => t.shared).length,
-    totalCities: timeline.length,
-    userTrips: timeline.filter(t => !t.shared).length,
+    overall: Math.min(95, 65 + (anniv?.years || 0) * 5 + savedTrips.length * 3),
+    travelScore: 70 + Math.min(25, savedTrips.length * 5),
+    journalScore: 60 + Math.min(30, gallery.length * 5),
+    photoScore: 75 + Math.min(20, gallery.length * 5),
+    sharedCities: uniqueCities.size,
+    totalCities: uniqueCities.size,
+    userTrips: savedTrips.length,
     partnerTrips: 0,
   } : null;
   const journals = couple.journals || [];
@@ -106,12 +116,12 @@ export default function CoupleDashboard() {
       <div className="px-5 pt-14 pb-4">
         <div className="flex items-center justify-between mb-3">
           <Link href="/profile" className="text-[#C4956A] text-[13px] font-semibold">← Back</Link>
-          <button onClick={load} className="text-[11px] font-bold text-[#C4956A] bg-[#FDF0E0] rounded-full px-3 py-1">🔄 Refresh</button>
+          <button onClick={() => { const d = loadCouple(); const st = JSON.parse(localStorage.getItem('saved_trips') || '[]'); setPartner(d.partner || null); setAnniv(d.anniversary || null); setTimeline([...(d.timeline || []), ...st.map((t: any) => ({ ...t, id: t.id || t.savedAt, title: t.title || 'Trip', date: t.savedAt || t.startDate, shared: true, type: t.type || 'trip' }))]); setGallery(d.gallery || []); }} className="text-[11px] font-bold text-[#C4956A] bg-[#FDF0E0] rounded-full px-3 py-1">🔄 Refresh</button>
         </div>
         <div className="flex items-center gap-4 mb-4">
           <div className="flex -space-x-3">
             <div className="w-14 h-14 rounded-full bg-gradient-to-br from-pink-400 to-rose-500 flex items-center justify-center text-white text-xl font-extrabold ring-3 ring-white shadow-lg overflow-hidden">
-              {partner?.avatarUrl ? <img src={imgUrl(partner.avatarUrl)!} className="w-full h-full object-cover" alt="" /> : (pName?.[0] || '?')}
+              {partner?.avatarUrl ? <img src={partner.avatarUrl} className="w-full h-full object-cover" alt="" /> : (pName?.[0] || '?')}
             </div>
             <div className="w-14 h-14 rounded-full bg-gradient-to-br from-amber-400 to-orange-500 flex items-center justify-center text-white text-xl font-extrabold ring-3 ring-white shadow-lg overflow-hidden">
               {partner?.avatarUrl ? 'Y' : 'Y'}
@@ -222,7 +232,7 @@ export default function CoupleDashboard() {
             {gallery.length === 0 && <div className="col-span-3 text-center py-10"><Camera className="h-10 w-10 mx-auto text-[#D4C4B0] mb-2" /><p className="text-[#8B7355] text-sm">No shared photos yet</p></div>}
             {gallery.map((p: any) => (
               <div key={p.id} className="aspect-square rounded-xl overflow-hidden bg-[#F5EDE3]">
-                <img src={imgUrl(p.url)} className="w-full h-full object-cover" alt="" onError={e => { (e.target as HTMLImageElement).style.display = 'none'; }} />
+                <img src={p.url} className="w-full h-full object-cover" alt="" onError={e => { (e.target as HTMLImageElement).style.display = 'none'; }} />
               </div>
             ))}
           </div>
@@ -250,7 +260,7 @@ export default function CoupleDashboard() {
                     <div className="grid grid-cols-2 gap-2">
                       {detailSheet.items.map((p: any, i: number) => (
                         <div key={i} className="aspect-square rounded-xl overflow-hidden bg-[#F5EDE3] relative group">
-                          <img src={imgUrl(p.url)} className="w-full h-full object-cover" alt="" onError={e => { (e.target as HTMLImageElement).style.display = 'none'; }} />
+                          <img src={p.url} className="w-full h-full object-cover" alt="" onError={e => { (e.target as HTMLImageElement).style.display = 'none'; }} />
                           {p.place && <div className="absolute bottom-2 left-2 bg-black/50 text-white text-[10px] rounded-full px-2 py-0.5"><MapPin className="h-2.5 w-2.5 inline" /> {p.place}</div>}
                           {p.date && <div className="absolute top-2 right-2 bg-black/40 text-white text-[9px] rounded-full px-2 py-0.5">{p.date}</div>}
                           {p.caption && <p className="text-[11px] text-[#3C2415] mt-1 px-1">{p.caption}</p>}

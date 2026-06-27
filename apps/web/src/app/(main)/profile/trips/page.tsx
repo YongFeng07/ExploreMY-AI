@@ -205,7 +205,7 @@ export default function MyTripsPage() {
                               {idx < (day.stops?.length ?? 0) - 1 && <div className="w-0.5 flex-1 bg-[#D4C4B0] mt-1.5 mb-1.5" />}
                             </div>
                             <div className="flex-1 mb-5 bg-white rounded-2xl border border-[#E5E7EB] shadow-sm overflow-hidden hover:shadow-md">
-                              {s.photoUrl ? <img src={imgUrl(s.photoUrl)!} className="w-full h-44 object-cover" alt="" /> : <div className="w-full h-28 bg-[#FDF6ED] flex items-center justify-center text-4xl">{s.emoji ?? '📍'}</div>}
+                              {s.photoUrl ? <img src={s.photoUrl} className="w-full h-44 object-cover" alt="" /> : <div className="w-full h-28 bg-[#FDF6ED] flex items-center justify-center text-4xl">{s.emoji ?? '📍'}</div>}
                               <div className="p-4">
                                 <div className="flex items-center justify-between mb-1">
                                   <span className="text-[14px] font-bold text-[#1A1A1A]">{s.placeName}</span>
@@ -327,8 +327,9 @@ export default function MyTripsPage() {
         {displayTrips.map((t: any) => (
           <div key={t.id} className="bg-white rounded-2xl border border-[#E5E7EB] shadow-sm p-4 hover:shadow-md transition-all group">
             <div onClick={() => {
-              if (t.planData?.fullPlan) {
-                const fp = t.planData.fullPlan;
+              // Check both old API structure (planData.fullPlan) and new normalized structure (fullPlan)
+              const fp = t.fullPlan || t.planData?.fullPlan;
+              if (fp) {
                 sessionStorage.setItem('savedPlan', JSON.stringify(fp));
                 if (fp.city && fp.activities && !fp.destination) {
                   router.push('/date?view=saved');
