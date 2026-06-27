@@ -8,6 +8,9 @@ on:
 jobs:
   deploy:
     runs-on: ubuntu-latest
+    env:
+      VERCEL_ORG_ID: team_dsFhURJ8wcTyG2q3gQAal5zA
+      VERCEL_PROJECT_ID: prj_jnI2cjbE3IBmYush2mzCnNUmh3Kw
     steps:
       - uses: actions/checkout@v4
 
@@ -20,9 +23,9 @@ jobs:
           node-version: 20
           cache: 'pnpm'
 
-      - name: Install
+      - name: Install dependencies
         run: pnpm install --no-frozen-lockfile
 
       - name: Deploy to Vercel
         working-directory: apps/web
-        run: npx vercel --prod --scope eddie-s-projects12 --token=${{ secrets.VERCEL_TOKEN }} --yes
+        run: npx vercel --prod --token=${{ secrets.VERCEL_TOKEN }} --yes
