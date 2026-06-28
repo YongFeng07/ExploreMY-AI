@@ -24,14 +24,44 @@ const DATE_TYPES = [
 const TRANSPORT_MODES = [{v:'DRIVING',e:'🚗',l:'Driving'},{v:'GRAB',e:'🚕',l:'Grab'},{v:'WALKING',e:'🚶',l:'Walk'},{v:'PUBLIC',e:'🚆',l:'Transit'}];
 
 const MY_CITIES = [
-  'Kuala Lumpur','George Town, Penang','Johor Bahru','Melaka','Ipoh, Perak',
-  'Langkawi, Kedah','Cameron Highlands, Pahang','Kota Kinabalu, Sabah','Kuching, Sarawak',
-  'Kuantan, Pahang','Kuala Terengganu','Putrajaya','Petaling Jaya, Selangor',
-  'Shah Alam, Selangor','Seremban, N. Sembilan','Alor Setar, Kedah',
-  'Kota Bharu, Kelantan','Port Dickson','Genting Highlands, Pahang',
-  'Fraser\'s Hill, Pahang','Miri, Sarawak','Sandakan, Sabah',
-  'Pulau Perhentian','Pulau Redang','Pulau Tioman','Sekinchan, Selangor',
-  'Taiping, Perak','Batu Pahat, Johor','Bukit Tinggi, Pahang',
+  // ── KL / Selangor ──
+  'Kuala Lumpur, KL','Bukit Bintang, KL','KLCC, KL','Bangsar, KL','Damansara Heights, KL','Mont Kiara, KL','Cheras, KL','Ampang, Selangor','Setapak, KL','Wangsa Maju, KL','Sentul, KL','Batu Caves, Selangor','Gombak, Selangor',
+  'Petaling Jaya, Selangor','Subang Jaya, Selangor','Sunway, Selangor','Puchong, Selangor','Shah Alam, Selangor','Klang, Selangor','Kajang, Selangor','Cyberjaya, Selangor','Putrajaya, WP','Rawang, Selangor','Semenyih, Selangor','Dengkil, Selangor','Banting, Selangor','Kuala Selangor, Selangor','Sekinchan, Selangor','Tanjung Malim, Perak','Sepang, Selangor','Seri Kembangan, Selangor','Balakong, Selangor','Setia Alam, Selangor','Kota Kemuning, Selangor','Jenjarom, Selangor',
+  // ── Penang ──
+  'George Town, Penang','Batu Ferringhi, Penang','Tanjung Bungah, Penang','Tanjung Tokong, Penang','Gurney Drive, Penang','Butterworth, Penang','Bukit Mertajam, Penang','Bayan Lepas, Penang','Balik Pulau, Penang','Nibong Tebal, Penang','Seberang Jaya, Penang','Kepala Batas, Penang','Teluk Kumbar, Penang','Air Itam, Penang','Jelutong, Penang','Gelugor, Penang',
+  // ── Johor ──
+  'Johor Bahru, Johor','Iskandar Puteri, Johor','Nusajaya, Johor','Skudai, Johor','Tebrau, Johor','Mount Austin, Johor','Permas Jaya, Johor','Kulai, Johor','Senai, Johor','Pontian, Johor','Batu Pahat, Johor','Muar, Johor','Kluang, Johor','Segamat, Johor','Mersing, Johor','Kota Tinggi, Johor','Desaru, Johor','Tangkak, Johor','Labis, Johor','Simpang Renggam, Johor','Yong Peng, Johor','Ayer Hitam, Johor','Pasir Gudang, Johor','Gelang Patah, Johor',
+  // ── Melaka ──
+  'Melaka, Melaka','Jonker Street, Melaka','Klebang, Melaka','Ayer Keroh, Melaka','Alor Gajah, Melaka','Masjid Tanah, Melaka','Jasin, Melaka','Merlimau, Melaka','Sungai Udang, Melaka',
+  // ── Negeri Sembilan ──
+  'Seremban, N. Sembilan','Port Dickson, N. Sembilan','Nilai, N. Sembilan','Jempol, N. Sembilan','Kuala Pilah, N. Sembilan','Rembau, N. Sembilan','Tampin, N. Sembilan','Bahau, N. Sembilan','Gemas, N. Sembilan',
+  // ── Perak ──
+  'Ipoh, Perak','Taiping, Perak','Teluk Intan, Perak','Sitiawan, Perak','Lumut, Perak','Pangkor, Perak','Kuala Kangsar, Perak','Tambun, Perak','Batu Gajah, Perak','Kampar, Perak','Gopeng, Perak','Parit Buntar, Perak','Bagan Serai, Perak','Sungai Siput, Perak','Tapah, Perak','Bidor, Perak','Slim River, Perak','Tanjung Tualang, Perak',
+  // ── Kedah / Perlis ──
+  'Alor Setar, Kedah','Langkawi, Kedah','Kuah, Kedah','Pantai Cenang, Kedah','Sungai Petani, Kedah','Kulim, Kedah','Jitra, Kedah','Baling, Kedah','Yan, Kedah','Sik, Kedah','Kuala Kedah, Kedah','Pendang, Kedah','Kangar, Perlis','Arau, Perlis','Padang Besar, Perlis','Kuala Perlis, Perlis',
+  // ── Kelantan ──
+  'Kota Bharu, Kelantan','Pengkalan Chepa, Kelantan','Tumpat, Kelantan','Pasir Mas, Kelantan','Bachok, Kelantan','Kuala Krai, Kelantan','Tanah Merah, Kelantan','Pasir Puteh, Kelantan','Machang, Kelantan','Gua Musang, Kelantan','Rantau Panjang, Kelantan','Wakaf Bharu, Kelantan','Kubang Kerian, Kelantan',
+  // ── Terengganu ──
+  'Kuala Terengganu, Terengganu','Kuala Nerus, Terengganu','Marang, Terengganu','Dungun, Terengganu','Kemaman, Terengganu','Chukai, Terengganu','Pulau Redang, Terengganu','Pulau Perhentian, Terengganu','Kerteh, Terengganu','Paka, Terengganu','Besut, Terengganu','Setiu, Terengganu','Hulu Terengganu, Terengganu',
+  // ── Pahang ──
+  'Kuantan, Pahang','Genting Highlands, Pahang','Bukit Tinggi, Pahang','Bentong, Pahang','Raub, Pahang','Temerloh, Pahang','Jerantut, Pahang','Pekan, Pahang','Cameron Highlands, Pahang','Tanah Rata, Pahang','Brinchang, Pahang','Fraser\'s Hill, Pahang','Janda Baik, Pahang','Cherating, Pahang','Mentakab, Pahang','Kuala Lipis, Pahang','Maran, Pahang','Rompin, Pahang','Muadzam Shah, Pahang','Taman Negara, Pahang','Sungai Lembing, Pahang',
+  // ── Sabah ──
+  'Kota Kinabalu, Sabah','Sandakan, Sabah','Tawau, Sabah','Lahad Datu, Sabah','Semporna, Sabah','Keningau, Sabah','Ranau, Sabah','Kundasang, Sabah','Papar, Sabah','Beaufort, Sabah','Kota Belud, Sabah','Tuaran, Sabah','Kudat, Sabah','Tenom, Sabah','Tambunan, Sabah','Sipitang, Sabah','Kunak, Sabah','Penampang, Sabah','Putatan, Sabah','Kinabalu Park, Sabah','Poring Hot Spring, Sabah','Mabul Island, Sabah','Mataking Island, Sabah',
+  // ── Sarawak ──
+  'Kuching, Sarawak','Miri, Sarawak','Sibu, Sarawak','Bintulu, Sarawak','Mukah, Sarawak','Sarikei, Sarawak','Sri Aman, Sarawak','Kapit, Sarawak','Limbang, Sarawak','Lawas, Sarawak','Betong, Sarawak','Samarahan, Sarawak','Serian, Sarawak','Bau, Sarawak','Lundu, Sarawak','Bako, Sarawak','Santubong, Sarawak','Damai, Sarawak','Mulu, Sarawak','Marudi, Sarawak','Baram, Sarawak','Kota Samarahan, Sarawak','Asajaya, Sarawak','Simunjan, Sarawak','Lubok Antu, Sarawak','Song, Sarawak','Belaga, Sarawak','Dalat, Sarawak','Daro, Sarawak','Matu, Sarawak','Tanjung Manis, Sarawak',
+  // ── Small towns, villages, islands, streets, tourist spots ──
+  'Jalan Alor, KL','Chow Kit, KL','Kampung Baru, KL','Brickfields, KL','Titiwangsa, KL','Bukit Nanas, KL','Petaling Street, KL','Central Market, KL','Pavilion KL, KL','Suria KLCC, KL','TREC KL, KL','Changkat Bukit Bintang, KL',
+  'SS2, PJ','Damansara Uptown, PJ','Kota Damansara, Selangor','Kelana Jaya, Selangor','Ara Damansara, Selangor','Bandar Utama, Selangor','TTDI, KL','Bangsar South, KL','Sri Hartamas, KL','Desa ParkCity, KL','Publika, KL','Solaris Mont Kiara, KL',
+  'Broga, N. Sembilan','Mantin, N. Sembilan','Lenggeng, N. Sembilan','Jelebu, N. Sembilan','Kuala Klawang, N. Sembilan',
+  'Bukit Larut, Perak','Maxwell Hill, Perak','Kuala Sepetang, Perak','Matang, Perak','Beruas, Perak','Pantai Remis, Perak','Pasir Salak, Perak','Lenggong, Perak','Gerik, Perak','Pengkalan Hulu, Perak','Selama, Perak',
+  'Pekan Rabu, Kedah','Lembah Bujang, Kedah','Gurun, Kedah','Jeniang, Kedah','Kota Kuala Muda, Kedah','Merbok, Kedah','Tanjung Dawai, Kedah','Bedong, Kedah','Changloon, Kedah','Bukit Kayu Hitam, Kedah',
+  'Pantai Cahaya Bulan, Kelantan','Pantai Irama, Kelantan','Siti Khadijah Market, Kelantan','Kampung Kraftangan, Kelantan','Kuala Besut, Terengganu','Pangkalan Kubor, Kelantan','Tok Bali, Kelantan','Jeli, Kelantan','Dabong, Kelantan',
+  'Tasik Kenyir, Terengganu','Kuala Berang, Terengganu','Rantau Abang, Terengganu','Tenggol Island, Terengganu','Kapas Island, Terengganu','Lang Tengah Island, Terengganu','Kijal, Terengganu',
+  'Tasik Chini, Pahang','Tasik Bera, Pahang','Kuala Rompin, Pahang','Tioman Island, Pahang','Gambang, Pahang','Sungai Pandan, Pahang','Panching, Pahang','Chenor, Pahang','Bera, Pahang',
+  'Pulau Sapi, Sabah','Pulau Manukan, Sabah','Pulau Gaya, Sabah','Tunku Abdul Rahman Park, Sabah','Likas, Sabah','Inanam, Sabah','Menggatal, Sabah','Telipok, Sabah','Sepanggar, Sabah','Sulaman, Sabah',
+  'Pulau Sipadan, Sabah','Pulau Mabul, Sabah','Pulau Kapalai, Sabah','Pulau Mataking, Sabah','Pulau Pom Pom, Sabah','Pulau Bohey Dulang, Sabah','Tun Sakaran Marine Park, Sabah',
+  'Gunung Kinabalu, Sabah','Mesilau, Sabah','Timpohon Gate, Sabah','Labuan Rata, Sabah','Sayat Sayat, Sabah','Layang Layang, Sabah',
+  'Tusan Beach, Sarawak','Lambir Hills, Sarawak','Niah Caves, Sarawak','Gunung Mulu, Sarawak','Batang Ai, Sarawak','Kelabit Highlands, Sarawak','Bario, Sarawak','Bakelalan, Sarawak','Long Lellang, Sarawak',
 ];
 
 export default function DatingPlannerPage() {
@@ -70,21 +100,23 @@ export default function DatingPlannerPage() {
   const handleCityInput = (val: string) => {
     setCity(val);
     if (val.length >= 2) {
-      // Search Malaysian locations via Places API
-      fetch(`/api/places/search?q=${encodeURIComponent(val)}&lat=3.139&lng=101.6869&limit=8`)
+      // Search MY_CITIES + Google Places API with Malaysia bias
+      fetch(`/api/places/search?q=${encodeURIComponent(val + ' Malaysia')}&lat=4.0&lng=109.0&limit=10`)
         .then(r=>r.json()).then(d=>{
-          const names = (d.data||[]).map((p:any)=>p.name).filter((n:string)=>n&&n.length>2);
-          const unique = [...new Set([...MY_CITIES.filter(c=>c.toLowerCase().includes(val.toLowerCase())),...names])];
-          setCitySuggestions(unique.slice(0,8));
+          // Use full formatted names from Google, plus MY_CITIES matches
+          const gNames = (d.data||[]).map((p:any)=>p.name).filter((n:string)=>n&&n.length>2);
+          const localMatches = MY_CITIES.filter(c=>c.toLowerCase().includes(val.toLowerCase()));
+          const unique = [...new Set([...localMatches, ...gNames])];
+          setCitySuggestions(unique.slice(0,12));
           setShowCitySuggestions(true);
         }).catch(()=>{
           const filtered = MY_CITIES.filter(c=>c.toLowerCase().includes(val.toLowerCase()));
-          setCitySuggestions(filtered.slice(0,8));
+          setCitySuggestions(filtered.slice(0,12));
           setShowCitySuggestions(true);
         });
     } else if (val.length === 1) {
       const filtered = MY_CITIES.filter(c=>c.toLowerCase().includes(val.toLowerCase()));
-      setCitySuggestions(filtered.slice(0,8));
+      setCitySuggestions(filtered.slice(0,12));
       setShowCitySuggestions(true);
     } else {
       setCitySuggestions([]); setShowCitySuggestions(false);
@@ -105,34 +137,38 @@ export default function DatingPlannerPage() {
     if (!plan?.activities?.length) return;
     plan.activities.forEach((a: any) => {
       const name = a.placeName;
-      // Fetch from Google Places to get real photos + details
-      fetch(`/api/places/search?q=${encodeURIComponent(name + ' ' + (plan.city || 'Kuala Lumpur'))}&lat=${a.lat||3.139}&lng=${a.lng||101.6869}&limit=1`)
+      // Set Unsplash fallback first (guaranteed thumbnail)
+      const fallback = 'https://source.unsplash.com/600x400/?' + encodeURIComponent(name + ' ' + (a.category || 'restaurant'));
+      setActivityThumbs(prev => prev[name] ? prev : { ...prev, [name]: fallback });
+      const upUrls = Array.from({length: 10}, (_, i) => 'https://source.unsplash.com/800x600/?' + encodeURIComponent(name + ' ' + i));
+      setActivityPhotos(prev => prev[name] ? prev : { ...prev, [name]: upUrls });
+      // Step 1: Search for place ID
+      fetch('/api/places/search?q=' + encodeURIComponent(name + ' ' + (plan.city || 'Kuala Lumpur')) + '&lat=' + (a.lat||3.139) + '&lng=' + (a.lng||101.6869) + '&limit=1')
         .then(r => r.json())
         .then(d => {
           const place = d.data?.[0];
+          const pid = place?.id;
+          // Save basic info from search
           if (place) {
-            const photos = place.photos || [];
-            if (photos.length > 0) {
-              setActivityThumbs(prev => ({ ...prev, [name]: photos[0] }));
-              setActivityPhotos(prev => ({ ...prev, [name]: photos }));
-            }
-            // Save rich detail
+            if (place.photos?.[0]) setActivityThumbs(prev => ({ ...prev, [name]: place.photos[0] }));
             if (place.address || place.rating) {
-              setActivityDetails(prev => ({ ...prev, [name]: { address: place.address, rating: place.rating, reviewCount: place.userRatingsTotal, openNow: place.openNow, priceLevel: place.priceLevel } }));
+              setActivityDetails(prev => ({ ...prev, [name]: { ...(prev[name]||{}), address: place.address, rating: place.rating, reviewCount: place.userRatingsTotal||place.reviewCount, openNow: place.openNow, priceLevel: place.priceLevel } }));
             }
           }
+          // Step 2: Get 10 real photos + full details from details API
+          if (pid && !pid.startsWith('fb') && !pid.startsWith('citydb')) {
+            fetch('/api/places/details/' + pid)
+              .then(r => r.json()).then(dd => {
+                if (dd.data) {
+                  setActivityDetails(prev => ({ ...prev, [name]: { ...(prev[name]||{}), ...dd.data } }));
+                  if (dd.data.photos?.length) {
+                    setActivityPhotos(prev => ({ ...prev, [name]: [...dd.data.photos.slice(0, 10), ...upUrls].slice(0, 20) }));
+                    setActivityThumbs(prev => ({ ...prev, [name]: dd.data.photos[0] }));
+                  }
+                }
+              }).catch(()=>{});
+          }
         }).catch(() => {});
-      // Fetch full Place Details for richer info
-      fetch(`/api/places/search?q=${encodeURIComponent(name + ' ' + (plan.city || 'Kuala Lumpur'))}&lat=${a.lat||3.139}&lng=${a.lng||101.6869}&limit=1`)
-        .then(r => r.json()).then(d => {
-          const pid = d.data?.[0]?.id;
-          if (pid) fetch(`/api/places/${pid}`).then(r => r.json()).then(dd => {
-            if (dd.data) setActivityDetails(prev => ({ ...prev, [name]: dd.data }));
-          }).catch(()=>{});
-        }).catch(()=>{});
-      // Fallback thumbnail
-      const fallback = `https://source.unsplash.com/600x400/?${encodeURIComponent(name + ' ' + (a.category || 'restaurant'))}`;
-      setActivityThumbs(prev => prev[name] ? prev : { ...prev, [name]: fallback });
     });
   }, [plan?.activities]);
 
@@ -382,77 +418,89 @@ export default function DatingPlannerPage() {
       </div>
 
       {tab==='plan' && (
-        <div className="px-5 pb-36 space-y-3">
-          <p className="text-[10px] font-bold text-gray-400 uppercase tracking-wider px-1">💕 Date Timeline · {plan.startTime} → {plan.endTime}</p>
-          {plan.activities.map((a:any,i:number)=>(
-            <div key={i} onClick={()=>setSelActivity(a)}
-              className="bg-white rounded-xl p-4 border border-gray-100 shadow-sm hover:shadow-md transition-shadow cursor-pointer flex gap-3">
-              <div className="w-12 h-12 rounded-xl overflow-hidden flex-shrink-0 bg-pink-100">
-                {activityThumbs[a.placeName] ? (
-                  <img src={activityThumbs[a.placeName]} className="w-full h-full object-cover cursor-pointer hover:opacity-90" alt="" onClick={(e: any) => { e.stopPropagation(); setViewImages([activityThumbs[a.placeName]]); }} onError={e=>{(e.target as HTMLImageElement).style.display='none'}}/>
-                ) : (
-                  <div className="w-full h-full flex items-center justify-center text-lg">
-                    {a.activityType==='ROMANTIC'?'💕':a.activityType==='ADVENTURE'?'🧗':a.activityType==='CAFE'?'☕':a.activityType==='LUXURY'?'✨':a.activityType==='FOOD_HUNT'?'🍜':a.activityType==='NATURE'?'🌿':a.activityType==='BEACH'?'🏖️':'🌙'}
-                  </div>
-                )}
-              </div>
-              <div className="flex-1 min-w-0">
-                <div className="flex items-center justify-between">
-                  <p className="text-[13px] font-extrabold text-gray-800">{a.placeName}</p>
-                  <span className="text-[11px] font-bold text-pink-500">{a.time || a.timeSlot}</span>
-                </div>
-                <p className="text-[10px] text-gray-500">{a.category || a.activityType} · {a.duration || a.durationMinutes} · RM {(a.cost || a.estimatedCost) || 0}</p>
-                {/* Google Place rich detail inline */}
-                {activityDetails[a.placeName] && (
-                  <div className="flex items-center gap-2 mt-0.5 text-[10px] text-gray-400">
-                    {activityDetails[a.placeName].rating > 0 && <span className="flex items-center gap-0.5"><Star className="h-3 w-3 fill-amber-400 text-amber-400"/>{activityDetails[a.placeName].rating.toFixed(1)}</span>}
-                    {activityDetails[a.placeName].reviewCount > 0 && <span>({activityDetails[a.placeName].reviewCount})</span>}
-                    {activityDetails[a.placeName].openNow !== undefined && <span className={activityDetails[a.placeName].openNow?'text-green-500 font-bold':'text-red-400'}>{activityDetails[a.placeName].openNow?'🟢 Open':'🔴 Closed'}</span>}
-                    {activityDetails[a.placeName].priceLevel !== undefined && <span>{'💰'.repeat(activityDetails[a.placeName].priceLevel + 1)}</span>}
-                  </div>
-                )}
-                {activityDetails[a.placeName]?.address && <p className="text-[9px] text-gray-400 mt-0.5 truncate">📍 {activityDetails[a.placeName].address}</p>}
-                <p className="text-[11px] text-gray-600 mt-1 line-clamp-3">{a.description}</p>
-                {a.tip && <p className="text-[10px] text-pink-500 bg-pink-50 rounded-lg px-2 py-1 mt-1.5 italic">💡 {a.tip}</p>}
-                {a.dressCode && <p className="text-[9px] text-gray-400 mt-1">👔 {a.dressCode}{a.reservationNeeded ? ' · 📞 Reservation recommended' : ''}</p>}
-                <div className="flex gap-1.5 mt-2 flex-wrap">
-                  {a.isHighlight && <span className="text-[8px] font-bold bg-pink-50 text-pink-600 rounded-full px-2 py-0.5">✨ Highlight</span>}
-                  {a.category && <span className="text-[8px] font-bold bg-amber-50 text-amber-600 rounded-full px-2 py-0.5">{a.category}</span>}
-                  <span className="text-[8px] font-bold bg-emerald-50 text-emerald-600 rounded-full px-2 py-0.5">RM {(a.cost || a.estimatedCost) || 0}</span>
-                </div>
-              </div>
-              <ChevronRight className="h-4 w-4 text-gray-300 self-center flex-shrink-0" />
+        <div className="px-5 pb-36 space-y-4">
+          {/* Timeline header — Trip.com style */}
+          <div className="bg-gradient-to-r from-pink-500 to-rose-500 rounded-2xl p-4 text-white shadow-lg shadow-pink-200">
+            <p className="text-[10px] font-bold text-white/70 uppercase tracking-wider">💕 Date Timeline</p>
+            <div className="flex items-center gap-2 mt-1">
+              <span className="text-[18px] font-extrabold">{plan.startTime}</span>
+              <span className="text-white/50">→</span>
+              <span className="text-[18px] font-extrabold">{plan.endTime}</span>
+              <span className="text-white/40 text-[12px] ml-auto">{plan.durationHours}h · {plan.transportMode}</span>
             </div>
-          ))}
+          </div>
+          {/* Activity cards — Airbnb Experience style */}
+          {plan.activities.map((a:any,i:number)=>{
+            const thumbUrl = activityThumbs[a.placeName];
+            const detail = activityDetails[a.placeName];
+            return (
+            <div key={i} onClick={()=>setSelActivity(a)}
+              className="bg-white rounded-2xl border border-[#E8E4DE] shadow-sm hover:shadow-xl hover:-translate-y-0.5 transition-all duration-300 cursor-pointer overflow-hidden group">
+              {/* Photo area */}
+              {thumbUrl ? (
+                <div className="relative h-44 overflow-hidden">
+                  <img src={thumbUrl} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-700" alt="" onError={e=>{(e.target as HTMLImageElement).style.display='none'}}/>
+                  <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent"/>
+                  <span className="absolute top-3 left-3 bg-black/40 backdrop-blur-md rounded-full px-3 py-1.5 text-[11px] font-extrabold text-white">{a.time||a.timeSlot}</span>
+                  {a.isHighlight&&<span className="absolute top-3 right-3 bg-pink-500/90 backdrop-blur-md rounded-full px-3 py-1 text-[9px] font-bold text-white">✨ Highlight</span>}
+                  <span className="absolute bottom-3 left-3 text-white text-[14px] font-extrabold drop-shadow-lg">{a.placeName}</span>
+                </div>
+              ) : (
+                <div className="h-32 bg-gradient-to-br from-pink-100 to-rose-100 flex items-center justify-center text-5xl relative">
+                  <div className="absolute inset-0 opacity-20 bg-[radial-gradient(circle_at_50%_120%,#EC4899,transparent)]"/>
+                  {a.activityType==='ROMANTIC'?'💕':a.activityType==='ADVENTURE'?'🧗':a.activityType==='CAFE'?'☕':a.activityType==='LUXURY'?'✨':a.activityType==='FOOD_HUNT'?'🍜':a.activityType==='NATURE'?'🌿':a.activityType==='BEACH'?'🏖️':'🌙'}
+                </div>
+              )}
+              <div className="p-4">
+                {!thumbUrl && <h4 className="text-[15px] font-extrabold text-[#0E0E0E] mb-2">{a.placeName}</h4>}
+                <div className="flex items-center gap-2 mb-2 flex-wrap">
+                  {detail?.rating>0&&<span className="flex items-center gap-0.5 bg-amber-50 text-amber-700 rounded-full px-2 py-0.5 text-[11px] font-bold"><Star className="h-3 w-3 fill-amber-400 text-amber-400"/>{detail.rating.toFixed(1)}{detail.reviewCount>0&&<span className="text-[9px] ml-0.5">({detail.reviewCount})</span>}</span>}
+                  {detail?.openNow!==undefined&&<span className={cn('text-[10px] font-bold rounded-full px-2 py-0.5',detail.openNow?'bg-green-50 text-green-600':'bg-red-50 text-red-400')}>{detail.openNow?'🟢 Open':'🔴 Closed'}</span>}
+                  {detail?.priceLevel!==undefined&&<span className="text-[10px]">{'💰'.repeat(detail.priceLevel+1)}</span>}
+                  <span className="text-[11px] text-gray-400">{a.duration||a.durationMinutes}</span>
+                  <span className="text-[14px] font-extrabold text-rose-500 ml-auto">RM{(a.cost||a.estimatedCost)||0}</span>
+                </div>
+                <p className="text-[12px] text-[#6B7280] leading-relaxed line-clamp-2 mb-2">{a.description}</p>
+                {a.tip&&<p className="text-[11px] text-rose-500 bg-rose-50 rounded-lg px-3 py-2 italic flex items-start gap-2"><span className="flex-shrink-0">💡</span>{a.tip}</p>}
+                <div className="flex items-center gap-1.5 mt-2 flex-wrap">
+                  {a.category&&<span className="text-[8px] font-bold bg-amber-50 text-amber-600 rounded-full px-2 py-0.5">{a.category}</span>}
+                  {a.dressCode&&<span className="text-[8px] font-bold bg-purple-50 text-purple-600 rounded-full px-2 py-0.5">👔 {a.dressCode}</span>}
+                  {a.reservationNeeded&&<span className="text-[8px] font-bold bg-blue-50 text-blue-600 rounded-full px-2 py-0.5">📞 Reserve</span>}
+                  <ChevronRight className="h-4 w-4 text-gray-300 ml-auto"/>
+                </div>
+              </div>
+            </div>
+            );
+          })}
+          {/* Gifts Section */}
           {plan.giftSuggestions?.length>0 && (
-            <div className="bg-white rounded-xl p-4 border border-pink-100 shadow-sm mt-4">
-              <p className="text-[10px] font-bold text-pink-500 uppercase tracking-wider mb-3">🎁 Perfect Gifts for This Date</p>
+            <div className="bg-gradient-to-br from-pink-50 to-rose-50 rounded-2xl p-5 border border-pink-100 shadow-sm">
+              <p className="text-[11px] font-bold text-pink-500 uppercase tracking-wider mb-3">🎁 Perfect Gifts for This Date</p>
               <div className="grid grid-cols-2 gap-2">
                 {plan.giftSuggestions.map((g:any,i:number)=>(
-                  <div key={i} className="bg-gradient-to-br from-pink-50 to-rose-50 rounded-xl p-3 border border-pink-100 hover:shadow-md transition-all">
+                  <div key={i} onClick={()=>setSelGift(g)} className="bg-white rounded-xl p-3 border border-pink-100 hover:shadow-md transition-all cursor-pointer">
                     <div className="flex items-center gap-2 mb-1.5">
-                      <span className="text-2xl">{g.emoji || '🎁'}</span>
-                      <div>
-                        <p className="text-[12px] font-extrabold text-gray-800 leading-tight">{g.name}</p>
-                        <p className="text-[14px] font-extrabold text-pink-500">RM {g.cost}</p>
-                      </div>
+                      <span className="text-2xl">{g.emoji||'🎁'}</span>
+                      <div><p className="text-[12px] font-extrabold text-gray-800 leading-tight">{g.name}</p><p className="text-[15px] font-extrabold text-pink-500">RM{g.cost}</p></div>
                     </div>
-                    <p className="text-[10px] text-gray-500 leading-relaxed">💡 {g.reason || g.reasoning || 'A thoughtful gift for this special date'}</p>
+                    <p className="text-[10px] text-gray-500 leading-relaxed">💡 {g.reason||g.reasoning||'A thoughtful gift'}</p>
                   </div>
                 ))}
               </div>
             </div>
           )}
+          {/* Photo Spots */}
           {plan.bestPhotoSpots?.length>0 && (
-            <div className="bg-white rounded-xl p-4 border border-sky-100 shadow-sm">
-              <p className="text-[10px] font-bold text-sky-500 uppercase tracking-wider mb-2">📸 Best Photo Spots · Golden Hour {plan.goldenHourTiming}</p>
-              {plan.bestPhotoSpots.map((s:any,i:number)=>(
-                <div key={i} className="flex items-center gap-3 py-2 px-3 bg-sky-50/50 rounded-xl mb-1.5">
-                  <span className="text-lg">{['📸','🤳','🏙️','🌅','🎨','🏛️'][i%6]}</span>
-                  <span className="text-[12px] font-semibold text-gray-700">{typeof s === 'string' ? s : s.name}</span>
-                  {s.time && <span className="text-[10px] text-gray-400 ml-auto">{s.time}</span>}
-                </div>
-              ))}
+            <div className="bg-white rounded-2xl p-5 border border-sky-100 shadow-sm">
+              <p className="text-[11px] font-bold text-sky-500 uppercase tracking-wider mb-3">📸 Best Photo Spots · Golden Hour {plan.goldenHourTiming}</p>
+              <div className="grid grid-cols-2 gap-2">
+                {plan.bestPhotoSpots.map((s:any,i:number)=>(
+                  <div key={i} className="flex items-center gap-2 p-2.5 bg-sky-50/50 rounded-xl">
+                    <span className="text-xl flex-shrink-0">{['📸','🤳','🏙️','🌅','🎨','🏛️'][i%6]}</span>
+                    <div><p className="text-[11px] font-bold text-gray-700">{typeof s==='string'?s:s.name}</p>{s.time&&<p className="text-[9px] text-gray-400">{s.time}</p>}</div>
+                  </div>
+                ))}
+              </div>
             </div>
           )}
         </div>
@@ -874,7 +922,7 @@ export default function DatingPlannerPage() {
               for (const place of (sd.data || [])) {
                 const pid = place.id || place.place_id;
                 if (pid && !pid.startsWith('fb') && !pid.startsWith('citydb') && !pid.startsWith('mem')) {
-                  const dr = await fetch(`/api/places/${pid}`);
+                  const dr = await fetch('/api/places/details/' + pid);
                   const dd = await dr.json();
                   if (dd.data) { detail = dd.data; photos = dd.data.photos || []; if (photos.length >= 5) break; }
                 } else if (place.photos?.length > photos.length) { photos = place.photos; }

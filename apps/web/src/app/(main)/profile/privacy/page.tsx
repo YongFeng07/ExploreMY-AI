@@ -7,20 +7,36 @@ import { Shield, Eye, Lock, Globe, Heart, Map, Camera, BookOpen, Search } from '
 export default function PrivacyCenter() {
   const [settings, setSettings] = useState<any>(null);
   const [saving, setSaving] = useState('');
-  const token = typeof window !== 'undefined' ? '' : '';
+  const PRIVACY_KEY = 'privacy_settings';
 
   useEffect(() => {
-    fetch('/api/auth/me/privacy', { headers: { 'Authorization': `Bearer ${token}` } })
-      .then(r => r.json()).then(d => setSettings(d.data || {})).catch(() => {});
+    // Load from localStorage (no backend API)
+    try {
+      const saved = JSON.parse(localStorage.getItem(PRIVACY_KEY) || '{}');
+      setSettings({
+        profileVisibility: 'public',
+        allowSearch: true,
+        showRecommendations: true,
+        leaderboard: false,
+        showMap: true,
+        showStats: true,
+        showDNA: true,
+        albumPrivacy: 'followers',
+        journalPrivacy: 'followers',
+        showPartner: true,
+        showCoupleMemories: true,
+        showCoupleTrips: true,
+        showCoupleWallet: true,
+        ...saved,
+      });
+    } catch { setSettings({}); }
   }, []);
 
-  const save = async (key: string, value: any) => {
+  const save = (key: string, value: any) => {
     setSaving(key);
-    setSettings((prev: any) => ({ ...prev, [key]: value }));
-    await fetch('/api/auth/me/privacy', {
-      method: 'PATCH', headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
-      body: JSON.stringify({ [key]: value }),
-    });
+    const updated = { ...(settings || {}), [key]: value } as any;
+    setSettings(updated);
+    localStorage.setItem(PRIVACY_KEY, JSON.stringify(updated));
     setTimeout(() => setSaving(''), 500);
   };
 
@@ -94,23 +110,22 @@ export default function PrivacyCenter() {
         {/* Data & Account */}
         <div className="bg-white rounded-2xl shadow-sm border border-[#E8D5C4]/50 p-5">
           <p className="text-[11px] font-bold text-[#8B7355] uppercase tracking-wider mb-3"><Shield className="h-3.5 w-3.5 inline mr-1" />Data & Account</p>
-          <button onClick={async () => {
-            const r = await fetch('/api/auth/me', { headers: { 'Authorization': `Bearer ${token}` } });
-            const d = await r.json();
-            const blob = new Blob([JSON.stringify(d.data, null, 2)], { type: 'application/json' });
+          <button onClick={() => {
+            const data: any = {};
+            ['saved_trips','favorites','profile_photos','profile_reviews','profile_albums','wishlist','wallet_goals','couple_data','privacy_settings'].forEach(k => { try { data[k] = JSON.parse(localStorage.getItem(k) || 'null'); } catch {} });
+            const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
             const url = URL.createObjectURL(blob);
             const a = document.createElement('a'); a.href = url; a.download = 'exploremy-data.json'; a.click();
             URL.revokeObjectURL(url);
           }} className="w-full text-left p-3 rounded-xl bg-blue-50 hover:bg-blue-100 transition-colors flex items-center gap-3">
-            <span className="text-lg">📥</span><div><p className="text-[12px] font-bold text-blue-700">Export My Data</p><p className="text-[9px] text-blue-400">Download all your travel data</p></div>
+            <span className="text-lg">📥</span><div><p className="text-[12px] font-bold text-blue-700">Export My Data</p><p className="text-[9px] text-blue-400">Download all your travel data as JSON</p></div>
           </button>
-          <button onClick={async () => {
-            if (confirm('⚠️ This will permanently delete your account. Continue?')) {
-              await fetch('/api/auth/me', { method: 'DELETE', headers: { 'Authorization': `Bearer ${token}` } });
+          <button onClick={() => {
+            if (confirm('⚠️ This will permanently clear ALL local data. Continue?')) {
               localStorage.clear(); window.location.href = '/';
             }
           }} className="w-full text-left p-3 rounded-xl bg-red-50 hover:bg-red-100 transition-colors flex items-center gap-3 mt-2">
-            <span className="text-lg">🗑️</span><div><p className="text-[12px] font-bold text-red-600">Delete Account</p><p className="text-[9px] text-red-400">Permanently delete account and data</p></div>
+            <span className="text-lg">🗑️</span><div><p className="text-[12px] font-bold text-red-600">Clear All Data</p><p className="text-[9px] text-red-400">Permanently clear all local data</p></div>
           </button>
         </div>
       </div>

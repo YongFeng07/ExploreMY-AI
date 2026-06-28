@@ -10,16 +10,32 @@ export default function NotificationsPage() {
   const token = typeof window !== 'undefined' ? localStorage.getItem('accessToken') : '';
 
   const load = () => {
-    if (!token) { setLoading(false); return; }
-    fetch('/api/auth/me/notifications', { headers: { 'Authorization': `Bearer ${token}` } })
-      .then(r => r.json()).then(d => { setList(d.data || []); setLoading(false); }).catch(() => setLoading(false));
+    setLoading(true);
+    try {
+      // Generate notifications from localStorage activity
+      const items: any[] = [];
+      const trips = JSON.parse(localStorage.getItem('saved_trips') || '[]');
+      const favs = JSON.parse(localStorage.getItem('favorites') || '[]');
+      const reviews = JSON.parse(localStorage.getItem('profile_reviews') || '[]');
+      const photos = JSON.parse(localStorage.getItem('profile_photos') || '[]');
+      // Deterministic IDs — same across page loads for mark-read persistence
+      trips.slice(-3).forEach((t: any, i: number) => { items.push({ id: 'trip_'+ (t.id||t.savedAt||'t'+i), type:'trip', message:'🧳 Trip saved: '+(t.title||t.destination||'Your trip'), body:'You saved a trip to '+(t.destination||'a destination'), createdAt: t.savedAt||new Date().toISOString(), isRead: false }); });
+      favs.slice(-2).forEach((f: any, i: number) => { items.push({ id: 'fav_'+ (f.id||f.placeName||f.name||'f'+i), type:'like', message:'❤️ Added to favorites: '+(f.placeName||f.name||'A place'), createdAt: f.savedAt||new Date().toISOString(), isRead: true }); });
+      if (reviews.length > 0) { items.push({ id: 'rev_count', type:'review', message:'⭐ You have written '+reviews.length+' review'+(reviews.length>1?'s':''), body:'Share your travel experiences', createdAt: new Date().toISOString(), isRead: false }); }
+      if (photos.length > 0) { items.push({ id: 'photo_count', type:'photo', message:'📸 You have '+photos.length+' photo'+(photos.length>1?'s':'')+' in your gallery', body:'Your travel memories are growing', createdAt: new Date().toISOString(), isRead: false }); }
+      // Read status from localStorage
+      const readIds = JSON.parse(localStorage.getItem('notif_read') || '[]');
+      items.forEach(n => { if (readIds.includes(n.id)) n.isRead = true; });
+      items.sort((a,b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+      setList(items);
+    } catch {}
+    setLoading(false);
   };
   useEffect(() => { load(); }, []);
 
-  const markRead = async (id: string) => {
-    if (!token) return;
-    await fetch(`/api/auth/me/notifications/${id}/read`, { method: 'PATCH', headers: { 'Authorization': `Bearer ${token}` } });
+  const markRead = (id: string) => {
     setList(prev => prev.map(n => n.id === id ? { ...n, isRead: true } : n));
+    try { const readIds = JSON.parse(localStorage.getItem('notif_read') || '[]'); readIds.push(id); localStorage.setItem('notif_read', JSON.stringify(readIds)); } catch {}
   };
 
   const markAllRead = () => {

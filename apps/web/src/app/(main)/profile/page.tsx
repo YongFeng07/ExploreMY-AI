@@ -72,7 +72,25 @@ export default function ProfilePage() {
     data.level = calcLevel;
     data.xp = totalXP;
     data.stats = { cities: uniqueCities.size, trips: totalTrips, photos: photos.length, reviews: reviews.length, favorites: favs.length, savings: walletGoals.reduce((s: number, g: any) => s + (g.currentSavings || 0), 0) };
-    data.visitedCities = [...uniqueCities];
+    data.visitedCities = [...uniqueCities].map(c => c.charAt(0).toUpperCase() + c.slice(1));
+    // Compute Travel DNA from real data
+    data.dna = [
+      { e:'🍜', l:'Foodie', v: Math.min(95, 30 + totalTrips*5 + favs.length*3), color:'#C4956A' },
+      { e:'🌿', l:'Nature', v: Math.min(95, 25 + totalTrips*3 + photos.length*2), color:'#6B8E4E' },
+      { e:'📸', l:'Photo', v: Math.min(95, 20 + photos.length*3 + reviews.length*2), color:'#3B82F6' },
+      { e:'🏛️', l:'Culture', v: Math.min(95, 20 + totalTrips*2 + favs.length*2), color:'#B8860B' },
+      { e:'🧗', l:'Adventure', v: Math.min(95, 15 + totalTrips*3), color:'#D4736A' },
+    ];
+    // Badges from real achievements
+    const bdg: any[] = [];
+    if (totalTrips >= 1) bdg.push({ e:'✈️', n:'First Trip', unlocked:true });
+    if (totalTrips >= 5) bdg.push({ e:'🌍', n:'Globetrotter', unlocked:true });
+    if (photos.length >= 10) bdg.push({ e:'📸', n:'Photographer', unlocked:true });
+    if (favs.length >= 5) bdg.push({ e:'❤️', n:'Collector', unlocked:true });
+    if (reviews.length >= 3) bdg.push({ e:'⭐', n:'Critic', unlocked:true });
+    if (uniqueCities.size >= 3) bdg.push({ e:'🏙️', n:'City Hopper', unlocked:true });
+    if (walletGoals.length >= 1) bdg.push({ e:'💰', n:'Saver', unlocked:true });
+    data.badges = bdg;
   }
   const logout = () => signOut();
 
@@ -297,7 +315,7 @@ export default function ProfilePage() {
               </div>
               <div className="flex-1 min-w-0">
                 <p className="text-[14px] font-semibold text-[#171717]">Achievements</p>
-                <p className="text-[12px] text-[#9E9E9E]">{unlockedAchievements}/{totalAchievements} unlocked · {achievements?.totalXp || 0} XP earned</p>
+                <p className="text-[12px] text-[#9E9E9E]">{unlockedAchievements}/{totalAchievements} unlocked · {totalXP} XP earned</p>
               </div>
               <div className="flex items-center gap-2 flex-shrink-0">
                 <div className="w-14 h-1.5 rounded-full bg-[#EDF3EA] overflow-hidden">
@@ -383,16 +401,16 @@ export default function ProfilePage() {
         </div>
         <div className="grid grid-cols-3 gap-2">
           {[
-            { href: '/profile/trips', icon: Compass, label: 'My Trips' },
-            { href: '/profile/albums', icon: Image, label: 'Albums' },
-            { href: '/profile/journal', icon: ScrollText, label: 'Journal' },
-            { href: '/profile/photos', icon: Camera, label: 'Photos' },
-            { href: '/profile/favorites', icon: Heart, label: 'Favorites' },
-            { href: '/profile/reviews', icon: Star, label: 'Reviews' },
-            { href: '/profile/wishlist', icon: Sparkles, label: 'Wishlist' },
-            { href: '/profile/memories', icon: Globe, label: 'Memories' },
-            { href: '/travel-map', icon: Compass, label: 'Travel Map' },
-            { href: '/profile/couple', icon: Heart, label: 'Couple' },
+            { href: '/profile/trips', icon: Compass, label: 'My Trips', count: totalTrips },
+            { href: '/profile/albums', icon: Image, label: 'Albums', count: albums.length },
+            { href: '/profile/journal', icon: ScrollText, label: 'Journal', count: 0 },
+            { href: '/profile/photos', icon: Camera, label: 'Photos', count: photos.length },
+            { href: '/profile/favorites', icon: Heart, label: 'Favorites', count: favs.length },
+            { href: '/profile/reviews', icon: Star, label: 'Reviews', count: reviews.length },
+            { href: '/profile/wishlist', icon: Sparkles, label: 'Wishlist', count: wishlist.length },
+            { href: '/profile/stats', icon: TrendingUp, label: 'Stats', count: null },
+            { href: '/travel-map', icon: Compass, label: 'Travel Map', count: null },
+            { href: '/profile/couple', icon: Heart, label: 'Couple', count: null },
           ].map((a, i) => (
             <motion.div key={a.href} initial={{ opacity: 0, y: 6 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: i * 0.02 }}>
               <Link href={a.href}
@@ -401,6 +419,7 @@ export default function ProfilePage() {
                   <a.icon className="h-5 w-5 text-[#315B43]" />
                 </div>
                 <span className="text-[12px] font-semibold text-[#6F6F6F] group-hover:text-[#315B43] transition-colors">{a.label}</span>
+                {a.count !== null && a.count > 0 && <span className="text-[10px] font-bold text-[#315B43] bg-[#E8F2EB] rounded-full px-2 py-0.5 -mt-1">{a.count}</span>}
               </Link>
             </motion.div>
           ))}

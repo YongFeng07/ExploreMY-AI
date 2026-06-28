@@ -1,7 +1,7 @@
 // @ts-nocheck
 'use client';
 import { useState, useEffect } from 'react';
-import { MapPin, CalendarDays, Users, Sparkles, Clock, Star, Navigation, ChevronLeft, ChevronRight, Camera } from 'lucide-react';
+import { MapPin, CalendarDays, Users, Sparkles, Clock, Star, Navigation, ChevronLeft, ChevronRight, Camera, X } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { toast } from 'sonner';
 import { getTransportMode } from '@/lib/transport-mode';
@@ -13,36 +13,148 @@ const STYLES = ['🍜 Foodie', '🧗 Adventure', '🌿 Nature', '📸 Photo', '�
 const PREFS = ['🍖 Halal', '🥬 Veg', '👶 Kids', '♿ Access', '🐾 Pets'];
 
 const MY_CITIES = [
-  { n: 'Kuala Lumpur', s: 'KL', lat: 3.139, lng: 101.6869 },
-  { n: 'George Town, Penang', s: 'Penang', lat: 5.4141, lng: 100.3288 },
-  { n: 'Johor Bahru', s: 'Johor', lat: 1.4927, lng: 103.7414 },
-  { n: 'Melaka', s: 'Melaka', lat: 2.1896, lng: 102.2501 },
-  { n: 'Ipoh, Perak', s: 'Perak', lat: 4.5975, lng: 101.0901 },
-  { n: 'Langkawi, Kedah', s: 'Kedah', lat: 6.3500, lng: 99.8000 },
-  { n: 'Cameron Highlands, Pahang', s: 'Pahang', lat: 4.4833, lng: 101.3833 },
-  { n: 'Kota Kinabalu, Sabah', s: 'Sabah', lat: 5.9804, lng: 116.0735 },
-  { n: 'Kuching, Sarawak', s: 'Sarawak', lat: 1.5533, lng: 110.3592 },
-  { n: 'Kuantan, Pahang', s: 'Pahang', lat: 3.8167, lng: 103.3333 },
-  { n: 'Kuala Terengganu', s: 'Terengganu', lat: 5.3303, lng: 103.1408 },
-  { n: 'Putrajaya', s: 'Putrajaya', lat: 2.9264, lng: 101.6964 },
-  { n: 'Petaling Jaya, Selangor', s: 'Selangor', lat: 3.1073, lng: 101.6065 },
-  { n: 'Shah Alam, Selangor', s: 'Selangor', lat: 3.0738, lng: 101.5183 },
-  { n: 'Seremban, N. Sembilan', s: 'Negeri Sembilan', lat: 2.7297, lng: 101.9381 },
-  { n: 'Alor Setar, Kedah', s: 'Kedah', lat: 6.1248, lng: 100.3673 },
-  { n: 'Kota Bharu, Kelantan', s: 'Kelantan', lat: 6.1254, lng: 102.2384 },
-  { n: 'Port Dickson', s: 'Negeri Sembilan', lat: 2.5225, lng: 101.7945 },
-  { n: 'Genting Highlands, Pahang', s: 'Pahang', lat: 3.4237, lng: 101.7935 },
-  { n: 'Fraser\'s Hill, Pahang', s: 'Pahang', lat: 3.7119, lng: 101.7365 },
-  { n: 'Miri, Sarawak', s: 'Sarawak', lat: 4.3995, lng: 113.9914 },
-  { n: 'Sandakan, Sabah', s: 'Sabah', lat: 5.8394, lng: 118.1172 },
-  { n: 'Tawau, Sabah', s: 'Sabah', lat: 4.2448, lng: 117.8912 },
-  { n: 'Pulau Perhentian', s: 'Terengganu', lat: 5.8922, lng: 102.7473 },
-  { n: 'Pulau Redang', s: 'Terengganu', lat: 5.7749, lng: 103.0224 },
-  { n: 'Pulau Tioman', s: 'Pahang', lat: 2.7915, lng: 104.1694 },
-  { n: 'Bukit Tinggi, Pahang', s: 'Pahang', lat: 3.3537, lng: 101.8264 },
-  { n: 'Sekinchan, Selangor', s: 'Selangor', lat: 3.5053, lng: 101.1024 },
-  { n: 'Taiping, Perak', s: 'Perak', lat: 4.8519, lng: 100.7413 },
-  { n: 'Batu Pahat, Johor', s: 'Johor', lat: 1.8494, lng: 102.9288 },
+  // ── KL / Selangor ──
+  { n:'Kuala Lumpur, KL', s:'KL', lat:3.139, lng:101.6869 },
+  { n:'Bukit Bintang, KL', s:'KL', lat:3.146, lng:101.708 },
+  { n:'Bangsar, KL', s:'KL', lat:3.130, lng:101.673 },
+  { n:'Cheras, KL', s:'KL', lat:3.107, lng:101.717 },
+  { n:'Mont Kiara, KL', s:'KL', lat:3.172, lng:101.653 },
+  { n:'Damansara Heights, KL', s:'KL', lat:3.150, lng:101.660 },
+  { n:'Ampang, Selangor', s:'Selangor', lat:3.150, lng:101.764 },
+  { n:'Batu Caves, Selangor', s:'Selangor', lat:3.238, lng:101.681 },
+  { n:'Petaling Jaya, Selangor', s:'Selangor', lat:3.107, lng:101.607 },
+  { n:'Subang Jaya, Selangor', s:'Selangor', lat:3.050, lng:101.585 },
+  { n:'Sunway, Selangor', s:'Selangor', lat:3.073, lng:101.608 },
+  { n:'Puchong, Selangor', s:'Selangor', lat:3.032, lng:101.617 },
+  { n:'Shah Alam, Selangor', s:'Selangor', lat:3.074, lng:101.518 },
+  { n:'Klang, Selangor', s:'Selangor', lat:3.045, lng:101.450 },
+  { n:'Kajang, Selangor', s:'Selangor', lat:2.993, lng:101.789 },
+  { n:'Cyberjaya, Selangor', s:'Selangor', lat:2.922, lng:101.652 },
+  { n:'Putrajaya, WP', s:'WP', lat:2.926, lng:101.696 },
+  { n:'Sekinchan, Selangor', s:'Selangor', lat:3.505, lng:101.102 },
+  { n:'Rawang, Selangor', s:'Selangor', lat:3.321, lng:101.575 },
+  { n:'Sepang, Selangor', s:'Selangor', lat:2.694, lng:101.740 },
+  { n:'Gombak, Selangor', s:'Selangor', lat:3.275, lng:101.721 },
+  { n:'Setia Alam, Selangor', s:'Selangor', lat:3.101, lng:101.456 },
+  { n:'Kuala Selangor, Selangor', s:'Selangor', lat:3.340, lng:101.250 },
+  // ── Penang ──
+  { n:'George Town, Penang', s:'Penang', lat:5.414, lng:100.329 },
+  { n:'Batu Ferringhi, Penang', s:'Penang', lat:5.474, lng:100.246 },
+  { n:'Tanjung Bungah, Penang', s:'Penang', lat:5.453, lng:100.293 },
+  { n:'Butterworth, Penang', s:'Penang', lat:5.399, lng:100.370 },
+  { n:'Bukit Mertajam, Penang', s:'Penang', lat:5.362, lng:100.468 },
+  { n:'Bayan Lepas, Penang', s:'Penang', lat:5.292, lng:100.263 },
+  { n:'Balik Pulau, Penang', s:'Penang', lat:5.352, lng:100.237 },
+  { n:'Air Itam, Penang', s:'Penang', lat:5.409, lng:100.280 },
+  // ── Johor ──
+  { n:'Johor Bahru, Johor', s:'Johor', lat:1.493, lng:103.741 },
+  { n:'Iskandar Puteri, Johor', s:'Johor', lat:1.422, lng:103.639 },
+  { n:'Skudai, Johor', s:'Johor', lat:1.544, lng:103.663 },
+  { n:'Desaru, Johor', s:'Johor', lat:1.541, lng:104.269 },
+  { n:'Batu Pahat, Johor', s:'Johor', lat:1.849, lng:102.929 },
+  { n:'Muar, Johor', s:'Johor', lat:2.046, lng:102.569 },
+  { n:'Kluang, Johor', s:'Johor', lat:2.035, lng:103.320 },
+  { n:'Kota Tinggi, Johor', s:'Johor', lat:1.733, lng:103.902 },
+  { n:'Mersing, Johor', s:'Johor', lat:2.431, lng:103.836 },
+  { n:'Segamat, Johor', s:'Johor', lat:2.515, lng:102.813 },
+  { n:'Pontian, Johor', s:'Johor', lat:1.487, lng:103.390 },
+  { n:'Kulai, Johor', s:'Johor', lat:1.654, lng:103.600 },
+  // ── Melaka ──
+  { n:'Melaka, Melaka', s:'Melaka', lat:2.190, lng:102.250 },
+  { n:'Ayer Keroh, Melaka', s:'Melaka', lat:2.268, lng:102.301 },
+  { n:'Klebang, Melaka', s:'Melaka', lat:2.220, lng:102.196 },
+  { n:'Alor Gajah, Melaka', s:'Melaka', lat:2.383, lng:102.212 },
+  { n:'Jasin, Melaka', s:'Melaka', lat:2.308, lng:102.431 },
+  { n:'Masjid Tanah, Melaka', s:'Melaka', lat:2.349, lng:102.114 },
+  // ── N. Sembilan ──
+  { n:'Seremban, N. Sembilan', s:'N. Sembilan', lat:2.730, lng:101.938 },
+  { n:'Port Dickson, N. Sembilan', s:'N. Sembilan', lat:2.523, lng:101.795 },
+  { n:'Nilai, N. Sembilan', s:'N. Sembilan', lat:2.817, lng:101.796 },
+  { n:'Tampin, N. Sembilan', s:'N. Sembilan', lat:2.472, lng:102.226 },
+  // ── Perak ──
+  { n:'Ipoh, Perak', s:'Perak', lat:4.598, lng:101.090 },
+  { n:'Taiping, Perak', s:'Perak', lat:4.852, lng:100.741 },
+  { n:'Pangkor, Perak', s:'Perak', lat:4.228, lng:100.558 },
+  { n:'Lumut, Perak', s:'Perak', lat:4.213, lng:100.640 },
+  { n:'Teluk Intan, Perak', s:'Perak', lat:4.027, lng:101.018 },
+  { n:'Sitiawan, Perak', s:'Perak', lat:4.217, lng:100.698 },
+  { n:'Kuala Kangsar, Perak', s:'Perak', lat:4.774, lng:100.941 },
+  { n:'Gopeng, Perak', s:'Perak', lat:4.475, lng:101.161 },
+  { n:'Kampar, Perak', s:'Perak', lat:4.308, lng:101.155 },
+  { n:'Tambun, Perak', s:'Perak', lat:4.618, lng:101.128 },
+  { n:'Tanjung Tualang, Perak', s:'Perak', lat:4.320, lng:101.060 },
+  // ── Kedah / Perlis ──
+  { n:'Langkawi, Kedah', s:'Kedah', lat:6.350, lng:99.800 },
+  { n:'Alor Setar, Kedah', s:'Kedah', lat:6.125, lng:100.367 },
+  { n:'Sungai Petani, Kedah', s:'Kedah', lat:5.640, lng:100.492 },
+  { n:'Kulim, Kedah', s:'Kedah', lat:5.365, lng:100.558 },
+  { n:'Jitra, Kedah', s:'Kedah', lat:6.264, lng:100.417 },
+  { n:'Yan, Kedah', s:'Kedah', lat:5.790, lng:100.374 },
+  { n:'Baling, Kedah', s:'Kedah', lat:5.674, lng:100.917 },
+  { n:'Kangar, Perlis', s:'Perlis', lat:6.437, lng:100.201 },
+  { n:'Padang Besar, Perlis', s:'Perlis', lat:6.662, lng:100.324 },
+  // ── Kelantan ──
+  { n:'Kota Bharu, Kelantan', s:'Kelantan', lat:6.125, lng:102.238 },
+  { n:'Tumpat, Kelantan', s:'Kelantan', lat:6.199, lng:102.170 },
+  { n:'Bachok, Kelantan', s:'Kelantan', lat:6.057, lng:102.401 },
+  { n:'Pasir Mas, Kelantan', s:'Kelantan', lat:6.044, lng:102.144 },
+  { n:'Kuala Krai, Kelantan', s:'Kelantan', lat:5.530, lng:102.202 },
+  { n:'Gua Musang, Kelantan', s:'Kelantan', lat:4.879, lng:101.965 },
+  { n:'Rantau Panjang, Kelantan', s:'Kelantan', lat:6.017, lng:101.973 },
+  // ── Terengganu ──
+  { n:'Kuala Terengganu, Terengganu', s:'Terengganu', lat:5.330, lng:103.141 },
+  { n:'Pulau Perhentian, Terengganu', s:'Terengganu', lat:5.892, lng:102.747 },
+  { n:'Pulau Redang, Terengganu', s:'Terengganu', lat:5.775, lng:103.022 },
+  { n:'Dungun, Terengganu', s:'Terengganu', lat:4.761, lng:103.413 },
+  { n:'Kemaman, Terengganu', s:'Terengganu', lat:4.233, lng:103.446 },
+  { n:'Marang, Terengganu', s:'Terengganu', lat:5.203, lng:103.207 },
+  { n:'Kerteh, Terengganu', s:'Terengganu', lat:4.506, lng:103.453 },
+  { n:'Besut, Terengganu', s:'Terengganu', lat:5.820, lng:102.557 },
+  { n:'Kapas Island, Terengganu', s:'Terengganu', lat:5.219, lng:103.266 },
+  // ── Pahang ──
+  { n:'Kuantan, Pahang', s:'Pahang', lat:3.817, lng:103.333 },
+  { n:'Genting Highlands, Pahang', s:'Pahang', lat:3.424, lng:101.794 },
+  { n:'Cameron Highlands, Pahang', s:'Pahang', lat:4.483, lng:101.383 },
+  { n:"Fraser's Hill, Pahang", s:'Pahang', lat:3.712, lng:101.736 },
+  { n:'Bukit Tinggi, Pahang', s:'Pahang', lat:3.354, lng:101.826 },
+  { n:'Cherating, Pahang', s:'Pahang', lat:4.128, lng:103.389 },
+  { n:'Janda Baik, Pahang', s:'Pahang', lat:3.323, lng:101.861 },
+  { n:'Bentong, Pahang', s:'Pahang', lat:3.522, lng:101.905 },
+  { n:'Raub, Pahang', s:'Pahang', lat:3.793, lng:101.858 },
+  { n:'Temerloh, Pahang', s:'Pahang', lat:3.448, lng:102.420 },
+  { n:'Pulau Tioman, Pahang', s:'Pahang', lat:2.792, lng:104.169 },
+  { n:'Taman Negara, Pahang', s:'Pahang', lat:4.423, lng:102.410 },
+  // ── Sabah ──
+  { n:'Kota Kinabalu, Sabah', s:'Sabah', lat:5.980, lng:116.074 },
+  { n:'Sandakan, Sabah', s:'Sabah', lat:5.839, lng:118.117 },
+  { n:'Tawau, Sabah', s:'Sabah', lat:4.245, lng:117.891 },
+  { n:'Semporna, Sabah', s:'Sabah', lat:4.479, lng:118.610 },
+  { n:'Kundasang, Sabah', s:'Sabah', lat:5.981, lng:116.579 },
+  { n:'Ranau, Sabah', s:'Sabah', lat:5.951, lng:116.668 },
+  { n:'Keningau, Sabah', s:'Sabah', lat:5.332, lng:116.159 },
+  { n:'Lahad Datu, Sabah', s:'Sabah', lat:5.023, lng:118.334 },
+  { n:'Papar, Sabah', s:'Sabah', lat:5.731, lng:115.932 },
+  { n:'Tuaran, Sabah', s:'Sabah', lat:6.176, lng:116.234 },
+  { n:'Kota Belud, Sabah', s:'Sabah', lat:6.349, lng:116.428 },
+  { n:'Kudat, Sabah', s:'Sabah', lat:6.884, lng:116.849 },
+  { n:'Pulau Sipadan, Sabah', s:'Sabah', lat:4.113, lng:118.629 },
+  { n:'Kinabalu Park, Sabah', s:'Sabah', lat:6.005, lng:116.542 },
+  // ── Sarawak ──
+  { n:'Kuching, Sarawak', s:'Sarawak', lat:1.553, lng:110.359 },
+  { n:'Miri, Sarawak', s:'Sarawak', lat:4.399, lng:113.991 },
+  { n:'Sibu, Sarawak', s:'Sarawak', lat:2.287, lng:111.831 },
+  { n:'Bintulu, Sarawak', s:'Sarawak', lat:3.170, lng:113.036 },
+  { n:'Mukah, Sarawak', s:'Sarawak', lat:2.895, lng:112.095 },
+  { n:'Sarikei, Sarawak', s:'Sarawak', lat:2.129, lng:111.522 },
+  { n:'Sri Aman, Sarawak', s:'Sarawak', lat:1.240, lng:111.462 },
+  { n:'Kapit, Sarawak', s:'Sarawak', lat:2.016, lng:112.940 },
+  { n:'Limbang, Sarawak', s:'Sarawak', lat:4.755, lng:115.005 },
+  { n:'Lawas, Sarawak', s:'Sarawak', lat:4.857, lng:115.407 },
+  { n:'Santubong, Sarawak', s:'Sarawak', lat:1.711, lng:110.336 },
+  { n:'Damai, Sarawak', s:'Sarawak', lat:1.743, lng:110.316 },
+  { n:'Bako, Sarawak', s:'Sarawak', lat:1.669, lng:110.430 },
+  { n:'Mulu, Sarawak', s:'Sarawak', lat:4.048, lng:114.813 },
+  { n:'Bario, Sarawak', s:'Sarawak', lat:3.742, lng:115.472 },
 ];
 
 // ═══════════════════════════════════════════════════════════════════════════════
@@ -1038,36 +1150,58 @@ export default function Page() {
   const [selHotel, setSelHotel] = useState<any>(null);
   const [hotelFilter, setHotelFilter] = useState<string>('all');
 
-  // Fetch real Google photos when plan changes (stops + hotels)
+  // Fetch photos for stops + hotels (Google Places first, Unsplash guaranteed fallback)
   useEffect(() => {
     if (!plan?.days?.length) return;
     const fetchPhotos = async () => {
       const map: Record<string, string[]> = {};
+      const CATEGORY_UNSPLASH: Record<string,string> = {
+        FOOD:'food+restaurant+dish',CAFE:'cafe+coffee+latte',TOURIST_ATTRACTION:'landmark+architecture+temple',
+        NATURE:'nature+waterfall+forest',HOTEL:'hotel+resort+room',NIGHTLIFE:'nightlife+bar+club',
+        SHOPPING:'shopping+mall+boutique',DESSERT:'dessert+cake+sweets',DRINKS:'cocktail+drinks+bar',
+      };
       // Fetch for stops
       for (const day of plan.days || []) {
         for (const stop of day.stops || []) {
+          // Always set Unsplash photos first (guaranteed 10 photos)
+          const kw = CATEGORY_UNSPLASH[stop.category] || stop.placeName;
+          const unsplashUrl = 'https://source.unsplash.com/800x600/?' + encodeURIComponent(kw);
+          const upUrls = Array.from({length: 10}, (_, i) => `https://source.unsplash.com/800x600/?${encodeURIComponent(stop.placeName + ' ' + kw)}+${i}`);
+          map[stop.placeName] = upUrls;
+          stop.photoUrl = stop.photoUrl || unsplashUrl;
+          // Try Google Places details API for 10 real photos
           try {
-            const r = await fetch(`/api/places/search?q=${encodeURIComponent(stop.placeName + ' ' + (plan.destination || ''))}&lat=${stop.lat}&lng=${stop.lng}&limit=1`);
-            const d = await r.json();
-            if (d.data?.[0]?.photos?.length) {
-              const gp = d.data[0].photos.slice(0, 10);
-              const up = Array.from({length: 10}, (_, i) => `https://source.unsplash.com/800x600/?${encodeURIComponent(stop.placeName)}+${i}`);
-              map[stop.placeName] = [...gp, ...up].slice(0, 20);
-              stop.photoUrl = gp[0] || up[0];
+            const sr = await fetch(`/api/places/search?q=${encodeURIComponent(stop.placeName + ' ' + (plan.destination || ''))}&lat=${stop.lat}&lng=${stop.lng}&limit=1`);
+            const sd = await sr.json();
+            const pid = sd.data?.[0]?.id;
+            if (pid && !pid.startsWith('fb') && !pid.startsWith('citydb')) {
+              const dr = await fetch(`/api/places/details/${pid}`);
+              const dd = await dr.json();
+              if (dd.data?.photos?.length) {
+                map[stop.placeName] = [...dd.data.photos.slice(0, 10), ...upUrls].slice(0, 20);
+                stop.photoUrl = dd.data.photos[0];
+              }
             }
           } catch {}
         }
       }
       // Fetch for hotels
       for (const hotel of plan.whereToStay || []) {
+        const hotelKW = 'hotel+resort+room';
+        const upUrls = Array.from({length: 10}, (_, i) => `https://source.unsplash.com/800x600/?${encodeURIComponent(hotel.name + ' hotel lobby')}+${i}`);
+        map[hotel.name] = upUrls;
+        hotel.photoUrl = hotel.photoUrl || upUrls[0];
         try {
-          const r = await fetch(`/api/places/search?q=${encodeURIComponent(hotel.name + ' ' + (plan.destination || '') + ' hotel')}&lat=${hotel.lat || plan.destinationLat || 3.139}&lng=${hotel.lng || plan.destinationLng || 101.6869}&limit=1`);
-          const d = await r.json();
-          if (d.data?.[0]?.photos?.length) {
-            const gp = d.data[0].photos.slice(0, 10);
-            const up = Array.from({length: 10}, (_, i) => `https://source.unsplash.com/800x600/?${encodeURIComponent(hotel.name + ' hotel')}+${i}`);
-            map[hotel.name] = [...gp, ...up].slice(0, 20);
-            hotel.photoUrl = gp[0] || up[0];
+          const sr = await fetch(`/api/places/search?q=${encodeURIComponent(hotel.name + ' ' + (plan.destination || '') + ' hotel')}&lat=${hotel.lat || 3.139}&lng=${hotel.lng || 101.6869}&limit=1`);
+          const sd = await sr.json();
+          const pid = sd.data?.[0]?.id;
+          if (pid && !pid.startsWith('fb') && !pid.startsWith('citydb')) {
+            const dr = await fetch(`/api/places/details/${pid}`);
+            const dd = await dr.json();
+            if (dd.data?.photos?.length) {
+              map[hotel.name] = [...dd.data.photos.slice(0, 10), ...upUrls].slice(0, 20);
+              hotel.photoUrl = dd.data.photos[0];
+            }
           }
         } catch {}
       }
@@ -1239,9 +1373,17 @@ export default function Page() {
 
   const handleOriginInput = (val: string) => {
     setOrigin(val);
-    if (val.length > 0) {
-      const filtered = MY_CITIES.filter(c => c.n.toLowerCase().includes(val.toLowerCase()) || c.s.toLowerCase().includes(val.toLowerCase()));
-      setOriginSuggestions(filtered.slice(0, 5));
+    if (val.length >= 2) {
+      const local = MY_CITIES.filter(c => c.n.toLowerCase().includes(val.toLowerCase()) || c.s.toLowerCase().includes(val.toLowerCase()));
+      fetch(`/api/places/search?q=${encodeURIComponent(val + ' Malaysia')}&lat=4.0&lng=109.0&limit=8`)
+        .then(r=>r.json()).then(d=>{
+          const gNames = (d.data||[]).map((p:any)=>p.name).filter((n:string)=>n&&n.length>2);
+          const names = [...new Set([...local.map(c=>c.n),...gNames])];
+          setOriginSuggestions(names.map(n=>({n,s:'',lat:0,lng:0})).slice(0,10));
+          setShowOriginSuggestions(true);
+        }).catch(()=>{ setOriginSuggestions(local.slice(0,8)); setShowOriginSuggestions(true); });
+    } else if (val.length === 1) {
+      setOriginSuggestions(MY_CITIES.filter(c=>c.n.toLowerCase().includes(val.toLowerCase())).slice(0,8));
       setShowOriginSuggestions(true);
     } else { setOriginSuggestions([]); setShowOriginSuggestions(false); }
   };
@@ -1255,14 +1397,19 @@ export default function Page() {
 
   const handleDestInput = (val: string) => {
     setDest(val);
-    if (val.length > 0) {
-      const filtered = MY_CITIES.filter(c => c.n.toLowerCase().includes(val.toLowerCase()) || c.s.toLowerCase().includes(val.toLowerCase()));
-      setSuggestions(filtered.slice(0, 6));
+    if (val.length >= 2) {
+      const local = MY_CITIES.filter(c => c.n.toLowerCase().includes(val.toLowerCase()) || c.s.toLowerCase().includes(val.toLowerCase()));
+      fetch(`/api/places/search?q=${encodeURIComponent(val + ' Malaysia')}&lat=4.0&lng=109.0&limit=10`)
+        .then(r=>r.json()).then(d=>{
+          const gNames = (d.data||[]).map((p:any)=>p.name).filter((n:string)=>n&&n.length>2);
+          const names = [...new Set([...local.map(c=>c.n),...gNames])];
+          setSuggestions(names.map(n=>({n,s:'',lat:0,lng:0})).slice(0,12));
+          setShowSuggestions(true);
+        }).catch(()=>{ setSuggestions(local.slice(0,10)); setShowSuggestions(true); });
+    } else if (val.length === 1) {
+      setSuggestions(MY_CITIES.filter(c=>c.n.toLowerCase().includes(val.toLowerCase())).slice(0,8));
       setShowSuggestions(true);
-    } else {
-      setSuggestions([]);
-      setShowSuggestions(false);
-    }
+    } else { setSuggestions([]); setShowSuggestions(false); }
   };
 
   const generate = async () => {
@@ -1758,7 +1905,7 @@ export default function Page() {
             <div className="card-travel p-4">
               <p className="text-[10px] font-bold text-[#8B7355] uppercase tracking-wider mb-2">🔔 Smart Alerts</p>
               <div className="space-y-1.5">
-                {(()=>{const bb=plan.budgetBreakdown;const a=[];if((bb.hotel?.estimatedCost||bb.hotel||0)/bb.total>0.35)a.push('🏨 Hotel >35% — try budget stays');if((bb.transport?.estimatedCost||bb.transport||0)/bb.total>0.25)a.push('🚕 Transport >25% — use public transit');if(util>0.85)a.push('⚠️ Budget tight — plan meals carefully');if(!a.length)a.push('✅ Budget balanced — enjoy your trip!');return a.map((s,i)=><p key={i} className="text-[11px] text-[#5C4A3A] leading-relaxed py-1.5 px-3 bg-[#FDF6ED] rounded-lg">{s}</p>);})()}
+                {(()=>{const bb=plan.budgetBreakdown;const u=bb.budgetUtilization||((plan.totalCost||bb.total)/(plan.budget||1));const a=[];if((bb.hotel?.estimatedCost||bb.hotel||0)/bb.total>0.35)a.push('🏨 Hotel >35% — try budget stays');if((bb.transport?.estimatedCost||bb.transport||0)/bb.total>0.25)a.push('🚕 Transport >25% — use public transit');if(u>0.85)a.push('⚠️ Budget tight — plan meals carefully');if(!a.length)a.push('✅ Budget balanced — enjoy your trip!');return a.map((s,i)=><p key={i} className="text-[11px] text-[#5C4A3A] leading-relaxed py-1.5 px-3 bg-[#FDF6ED] rounded-lg">{s}</p>);})()}
               </div>
             </div>
 

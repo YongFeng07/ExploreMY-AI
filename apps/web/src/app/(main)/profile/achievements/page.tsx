@@ -90,12 +90,14 @@ export default function AchievementsPage() {
     );
   }
 
+  const achievements: any[] = data?.achievements ?? [];
   const unlocked = data?.unlocked ?? 0;
   const total = data?.total ?? 0;
-  const totalXp = data?.totalXp ?? 0;
-  const progress = data?.progress ?? 0;
-  const byCategory = data?.byCategory ?? {};
-  const achievements: any[] = data?.achievements ?? [];
+  const totalXp = achievements.reduce((s:number,a:any)=>s+(a.unlocked?a.target*100:0),0);
+  const progress = total > 0 ? Math.round((unlocked/total)*100) : 0;
+  // Build byCategory from achievements
+  const byCategory: Record<string,{unlocked:number;total:number}> = {};
+  achievements.forEach(a=>{if(!byCategory[a.category])byCategory[a.category]={unlocked:0,total:0};byCategory[a.category].total++;if(a.unlocked)byCategory[a.category].unlocked++;});
   const filtered = activeCategory === 'all' ? achievements : achievements.filter((a: any) => a.category === activeCategory);
   const categories = ['all', ...Object.keys(byCategory || {})];
 
@@ -184,7 +186,10 @@ export default function AchievementsPage() {
           <div className="space-y-2.5">
             {filtered.map((a: any, i: number) => {
               const meta = CATEGORY_META[a.category];
-              const pct = Math.round((a.progress || 0) * 100);
+              const pct = Math.round(((a.progress || 0) / (a.target || 1)) * 100);
+              const catEmojis: Record<string,string> = {trips:'✈️',cities:'🏙️',photos:'📸',journals:'📝',favorites:'❤️',reviews:'⭐',couple:'💑',wallet:'💰',albums:'📚',wishlist:'🎯'};
+              const emoji = catEmojis[a.category] || '🏆';
+              const xp = a.target * 100;
               return (
                 <motion.div key={a.id} initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }}
                   transition={{ delay: i * 0.03 }}
@@ -193,24 +198,24 @@ export default function AchievementsPage() {
                     {/* Emoji icon */}
                     <div className="w-12 h-12 rounded-2xl flex items-center justify-center text-2xl flex-shrink-0"
                       style={{ background: a.unlocked ? meta?.bg || '#FDF0E0' : '#F5EDE3' }}>
-                      {a.unlocked ? a.emoji : '🔒'}
+                      {a.unlocked ? emoji : '🔒'}
                     </div>
 
                     {/* Info + Progress */}
                     <div className="flex-1 min-w-0">
                       <div className="flex items-center justify-between mb-0.5">
-                        <h3 className="text-[15px] font-bold text-[#3C2415] truncate">{a.name}</h3>
-                        <span className="text-[11px] font-bold text-[#D4A574] flex-shrink-0 ml-2">+{a.xp} XP</span>
+                        <h3 className="text-[15px] font-bold text-[#3C2415] truncate">{a.title}</h3>
+                        <span className="text-[11px] font-bold text-[#D4A574] flex-shrink-0 ml-2">+{xp} XP</span>
                       </div>
-                      <p className="text-[12px] text-[#8B7355] truncate">{a.criteria}</p>
+                      <p className="text-[12px] text-[#8B7355] truncate">{a.description}</p>
                       <div className="mt-2 flex items-center gap-2">
                         <div className="flex-1 h-1.5 rounded-full bg-[#F5EDE3] overflow-hidden">
-                          <motion.div initial={{ width: 0 }} animate={{ width: `${pct}%` }}
+                          <motion.div initial={{ width: 0 }} animate={{ width: `${Math.min(100,pct)}%` }}
                             transition={{ duration: 0.6, delay: 0.1 + i * 0.02 }}
                             className="h-full rounded-full"
                             style={{ background: a.unlocked ? meta?.color || '#C4956A' : '#D4C4B0' }} />
                         </div>
-                        <span className="text-[11px] font-bold text-[#8B7355] w-8 text-right">{pct}%</span>
+                        <span className="text-[11px] font-bold text-[#8B7355] w-12 text-right">{a.progress||0}/{a.target||1}</span>
                       </div>
                     </div>
 

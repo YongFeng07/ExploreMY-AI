@@ -55,10 +55,17 @@ export default function TravelStatsPage() {
     trips.forEach((t: any) => { if (t.destination) destinations.add(t.destination.toLowerCase()); });
     favs.forEach((f: any) => { if (f.city) destinations.add(f.city.toLowerCase()); });
 
+    // Build travel history with dates and proper states
+    const stateMap: Record<string,string> = {'kuala lumpur':'KL','penang':'Penang','johor':'Johor','melaka':'Melaka','perak':'Perak','kedah':'Kedah','kelantan':'Kelantan','terengganu':'Terengganu','pahang':'Pahang','selangor':'Selangor','negeri sembilan':'N. Sembilan','sabah':'Sabah','sarawak':'Sarawak','perlis':'Perlis','putrajaya':'WP','labuan':'Labuan'};
+    const getState = (city: string) => { const c = city.toLowerCase(); for (const [k,v] of Object.entries(stateMap)) { if (c.includes(k)) return v; } return 'Malaysia'; };
+    const history = trips.map((t:any) => ({ city: t.destination || '', state: getState(t.destination || ''), date: t.savedAt || t.startDate || t.createdAt || new Date().toISOString(), type: t.type || 'trip' }));
+    // Add favorites as city visits
+    favs.forEach((f:any)=>{ if (f.city && !destinations.has(f.city.toLowerCase())) { destinations.add(f.city.toLowerCase()); history.push({ city: f.city, state: getState(f.city), date: f.savedAt || new Date().toISOString(), type: 'favorite' }); } });
+    const journals = JSON.parse(localStorage.getItem('profile_albums') || '[]').length;
     setData({
-      profile: { level: Math.floor((trips.length + photos.length + reviews.length) / 3) + 1, xp: trips.length * 100 + photos.length * 20 + reviews.length * 50 },
-      achieve: { unlocked: [trips.length >= 1, photos.length >= 1, favs.length >= 1, reviews.length >= 1, albums.length >= 1, wishlist.length >= 1, goals.length >= 1].filter(Boolean).length, total: 7 },
-      history: [...destinations].map(d => ({ city: d, state: d })),
+      profile: { level: Math.floor((trips.length + photos.length + reviews.length) / 3) + 1, xp: trips.length * 100 + photos.length * 20 + reviews.length * 50, visitedCities: [...destinations].map(d => d.charAt(0).toUpperCase() + d.slice(1)), dna: [{ e:'🍜',l:'Foodie',v:Math.min(95,30+trips.length*5+favs.length*3),color:'#C4956A'},{ e:'🌿',l:'Nature',v:Math.min(95,25+trips.length*3+photos.length*2),color:'#6B8E4E'},{ e:'📸',l:'Photo',v:Math.min(95,20+photos.length*3+reviews.length*2),color:'#3B82F6'},{ e:'🏛️',l:'Culture',v:Math.min(95,20+trips.length*2+favs.length*2),color:'#B8860B'},{ e:'🧗',l:'Adventure',v:Math.min(95,15+trips.length*3),color:'#D4736A'}], myPhotos: photos.length, journals, memberSince: trips.length > 0 ? new Date(trips.reduce((a:any,b:any)=>new Date(a.savedAt||0)<new Date(b.savedAt||0)?a:b, trips[0]).savedAt).getFullYear() : new Date().getFullYear() },
+      achieve: { unlocked: [trips.length >= 1, photos.length >= 1, favs.length >= 1, reviews.length >= 1, albums.length >= 1, wishlist.length >= 1, goals.length >= 1].filter(Boolean).length, total: 7, progress: Math.round(([trips.length >= 1, photos.length >= 1, favs.length >= 1, reviews.length >= 1, albums.length >= 1, wishlist.length >= 1, goals.length >= 1].filter(Boolean).length / 7) * 100), totalXp: trips.length * 100 + photos.length * 20 + reviews.length * 50 + favs.length * 30 },
+      history,
       trips,
       stats: { totalTrips: trips.length, totalPhotos: photos.length, totalFavorites: favs.length, totalReviews: reviews.length, totalSaved, totalWishlist: wishlist.length, totalAlbums: albums.length, totalGoals: goals.length, citiesVisited: destinations.size },
     });
@@ -73,9 +80,9 @@ export default function TravelStatsPage() {
   const travelHistory = data?.history || [];
   const savedTrips = data?.trips || [];
   const achievements = data?.achieve;
-  const totalPhotos = profile?.myPhotos?.length || 0;
-  const totalJournals = profile?.journals?.length || 0;
-  const totalTrips = travelHistory.length + savedTrips.length;
+  const totalPhotos = profile?.myPhotos || 0;
+  const totalJournals = profile?.journals || 0;
+  const totalTrips = travelHistory.length;
 
   // Proper state matching via city-state map
   const visitedStates = new Set<string>();

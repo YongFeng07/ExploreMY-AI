@@ -8,11 +8,21 @@ import { ImageViewer } from '@/components/shared/image-viewer';
 import { toast } from 'sonner';
 
 const COUPLE_KEY = 'couple_data';
+const COUPLE_PARTNER_KEY = 'couple_partner';
+const COUPLE_GALLERY_KEY = 'couple_gallery';
+const COUPLE_TIMELINE_KEY = 'couple_timeline';
 const WALLET_KEY = 'couple_wallet';
 const JOURNALS_KEY = 'couple_journals';
 
+// Split storage to avoid quota issues with large gallery photos
+function lp(): any { try { return JSON.parse(localStorage.getItem(COUPLE_PARTNER_KEY) || 'null'); } catch { return null; } }
+function sp(d: any) { localStorage.setItem(COUPLE_PARTNER_KEY, JSON.stringify(d)); }
 function lc(): any { try { return JSON.parse(localStorage.getItem(COUPLE_KEY) || '{}'); } catch { return {}; } }
 function sc(d: any) { localStorage.setItem(COUPLE_KEY, JSON.stringify(d)); }
+function lg(): any[] { try { return JSON.parse(localStorage.getItem(COUPLE_GALLERY_KEY) || '[]'); } catch { return []; } }
+function sg(d: any[]) { try { localStorage.setItem(COUPLE_GALLERY_KEY, JSON.stringify(d)); } catch(e) { toast.error('Storage full — delete some photos'); } }
+function lt(): any[] { try { return JSON.parse(localStorage.getItem(COUPLE_TIMELINE_KEY) || '[]'); } catch { return []; } }
+function st(d: any[]) { localStorage.setItem(COUPLE_TIMELINE_KEY, JSON.stringify(d)); }
 function lw(): any[] { try { return JSON.parse(localStorage.getItem(WALLET_KEY) || '[]'); } catch { return []; } }
 function sw(d: any[]) { localStorage.setItem(WALLET_KEY, JSON.stringify(d)); }
 function lj(): any[] { try { return JSON.parse(localStorage.getItem(JOURNALS_KEY) || '[]'); } catch { return []; } }
@@ -61,6 +71,8 @@ export default function CoupleDashboard() {
   const [tab, setTab] = useState<'dashboard' | 'timeline' | 'gallery'>('dashboard');
   const [detailSheet, setDetailSheet] = useState<{ title: string; type: string; items: any[] } | null>(null);
   const [linkEmail, setLinkEmail] = useState('');
+  const [linkName, setLinkName] = useState('');
+  const [linkAvatar, setLinkAvatar] = useState('');
   const [msg, setMsg] = useState('');
   const [isNewCouple, setIsNewCouple] = useState(false);
 
@@ -74,9 +86,12 @@ export default function CoupleDashboard() {
   useEffect(() => {
     const d = lc();
     setCouple(d);
-    setPartner(d.partner || null);
+    // Load partner — try new key first, fall back to old couple_data.partner
+    let p = lp();
+    if (!p) { const oldPartner = d.partner; if (oldPartner) { sp(oldPartner); p = oldPartner; } }
+    setPartner(p);
     setAnniv(d.anniversary || null);
-    setGallery(d.gallery || []);
+    setGallery(lg()); // Separate key for gallery
 
     const allSaved = (() => { try { return JSON.parse(localStorage.getItem('saved_trips') || '[]'); } catch { return []; } })();
     const st = allSaved.filter((t: any) =>
@@ -91,7 +106,7 @@ export default function CoupleDashboard() {
     setJournals(jn);
 
     const tl = [
-      ...(d.timeline || []),
+      ...lt(),
       ...st.map((t: any) => ({
         ...t, id: t.id || t.savedAt, title: t.title || 'Trip', date: t.savedAt || t.startDate,
         shared: true, type: t.type || 'trip', category: 'trip', emoji: t.type === 'date' ? '💕' : '✈️',
@@ -132,18 +147,19 @@ export default function CoupleDashboard() {
 
   // ─── Partner Linking ───
   const linkPartner = () => {
-    if (!linkEmail.trim()) { setMsg('Enter your partner email'); return; }
-    const p = { email: linkEmail, name: linkEmail.split('@')[0], linkedAt: new Date().toISOString(), avatar: '' };
+    if (!linkEmail.trim()) { setMsg('Enter partner email'); return; }
+    const name = linkName.trim() || linkEmail.split('@')[0];
+    const p = { email: linkEmail, displayName: name, name, linkedAt: new Date().toISOString(), avatar: linkAvatar || '', avatarUrl: linkAvatar || '' };
     setPartner(p);
-    sc({ ...lc(), partner: p });
-    setLinkEmail(''); setMsg(''); setIsNewCouple(true);
+    sp(p); // Separate partner key
+    setLinkEmail(''); setLinkName(''); setLinkAvatar(''); setMsg(''); setIsNewCouple(true);
     toast.success('💑 Partner linked! Welcome to Couple Space');
     setTimeout(() => setIsNewCouple(false), 5000);
   };
   const unlinkPartner = () => {
     if (!confirm('Unlink your partner? This will clear shared data.')) return;
     setPartner(null); setAnniv(null);
-    sc({ ...lc(), partner: null, anniversary: null });
+    sp(null); localStorage.removeItem(COUPLE_PARTNER_KEY);
     toast('Partner unlinked');
   };
   const setAnniversary = () => {
@@ -183,7 +199,7 @@ export default function CoupleDashboard() {
         if (loaded === files.length) {
           const updated = [...newPhotos, ...gallery];
           setGallery(updated);
-          sc({ ...lc(), gallery: updated });
+          sg(updated); // Separate gallery key
           setUploadingPhoto(false);
           setPhotoCaption(''); setPhotoLocation('');
           toast.success(`📸 ${files.length} photo${files.length > 1 ? 's' : ''} uploaded!`);
@@ -195,11 +211,11 @@ export default function CoupleDashboard() {
 
   const toggleLikePhoto = (photoId: string) => {
     const updated = gallery.map(p => p.id === photoId ? { ...p, liked: !p.liked } : p);
-    setGallery(updated); sc({ ...lc(), gallery: updated });
+    setGallery(updated); sg(updated);
   };
   const deletePhoto = (photoId: string) => {
     const updated = gallery.filter(p => p.id !== photoId);
-    setGallery(updated); sc({ ...lc(), gallery: updated });
+    setGallery(updated); sg(updated);
     toast('Photo deleted');
   };
 
@@ -211,7 +227,7 @@ export default function CoupleDashboard() {
     const event = { ...newEvent, id: 't_' + Date.now(), date: newEvent.date || new Date().toISOString().split('T')[0], shared: true };
     const updated = [event, ...timeline];
     setTimeline(updated);
-    sc({ ...lc(), timeline: updated });
+    st(updated);
     setNewEvent({ title: '', date: '', category: 'milestone', emoji: '💎' });
     setShowEventForm(false);
     toast.success('✨ Event added to timeline!');
@@ -273,12 +289,15 @@ export default function CoupleDashboard() {
               </div>
             ))}
           </div>
-          {/* Email input */}
-          <div className="bg-[#FDF8F5] rounded-xl p-4">
-            <label className="text-[11px] font-bold text-[#8B7355] uppercase tracking-wider mb-2 block">Partner's Email</label>
-            <input value={linkEmail} onChange={e => setLinkEmail(e.target.value)} placeholder="partner@email.com"
-              className="w-full rounded-xl border-2 border-[#E8D5C4] bg-white py-3.5 px-4 text-[15px] font-semibold text-[#3C2415] placeholder:text-[#A08970] outline-none focus:border-[#C4956A] mb-3" />
-            <button onClick={linkPartner} className="w-full py-3.5 rounded-xl bg-gradient-to-r from-pink-500 to-rose-500 text-white font-extrabold flex items-center justify-center gap-2 shadow-lg shadow-pink-200">
+          {/* Partner details form */}
+          <div className="bg-[#FDF8F5] rounded-xl p-4 space-y-2">
+            <label className="text-[11px] font-bold text-[#8B7355] uppercase tracking-wider block">Partner's Name</label>
+            <input value={linkName} onChange={e=>setLinkName(e.target.value)} placeholder="e.g. Sarah" className="w-full rounded-xl border-2 border-[#E8D5C4] bg-white py-3 px-4 text-[14px] font-semibold text-[#3C2415] placeholder:text-[#A08970] outline-none focus:border-[#C4956A]" />
+            <label className="text-[11px] font-bold text-[#8B7355] uppercase tracking-wider block mt-2">Partner's Email</label>
+            <input value={linkEmail} onChange={e=>setLinkEmail(e.target.value)} placeholder="partner@email.com" className="w-full rounded-xl border-2 border-[#E8D5C4] bg-white py-3 px-4 text-[14px] font-semibold text-[#3C2415] placeholder:text-[#A08970] outline-none focus:border-[#C4956A]" />
+            <label className="text-[11px] font-bold text-[#8B7355] uppercase tracking-wider block mt-2">Profile Picture URL (optional)</label>
+            <input value={linkAvatar} onChange={e=>setLinkAvatar(e.target.value)} placeholder="https://..." className="w-full rounded-xl border-2 border-[#E8D5C4] bg-white py-3 px-4 text-[14px] font-semibold text-[#3C2415] placeholder:text-[#A08970] outline-none focus:border-[#C4956A]" />
+            <button onClick={linkPartner} className="w-full py-3.5 rounded-xl bg-gradient-to-r from-pink-500 to-rose-500 text-white font-extrabold flex items-center justify-center gap-2 shadow-lg shadow-pink-200 mt-3">
               <Link2 className="h-4 w-4" /> Link Partner
             </button>
           </div>
@@ -309,11 +328,11 @@ export default function CoupleDashboard() {
           <Link href="/profile" className="text-[#C4956A] text-[13px] font-semibold">← Back</Link>
           <div className="flex items-center gap-2">
             <button onClick={() => {
-              const d = lc(); const st = allSavedTrips;
-              setPartner(d.partner || null); setAnniv(d.anniversary || null);
-              setGallery(d.gallery || []);
-              const updated = [...(d.timeline || []), ...st.filter((t: any) => t.groupType === 'COUPLE' || t.walletType === 'COUPLE' || t.type === 'date').map((t: any) => ({ ...t, id: t.id || t.savedAt, title: t.title || 'Trip', date: t.savedAt || t.startDate, shared: true, type: t.type || 'trip', emoji: t.type === 'date' ? '💕' : '✈️' }))];
-              setTimeline(updated);
+              const d = lc(); const allSavedTrips = (() => { try { return JSON.parse(localStorage.getItem('saved_trips') || '[]'); } catch { return []; } })();
+              let p2 = lp(); if (!p2) { const op = d.partner; if (op) { sp(op); p2 = op; } } setPartner(p2); setAnniv(d.anniversary || null);
+              setGallery(lg());
+              const tl = [...lt(), ...allSavedTrips.filter((t: any) => t.groupType === 'COUPLE' || t.walletType === 'COUPLE' || t.type === 'date').map((t: any) => ({ ...t, id: t.id || t.savedAt, title: t.title || 'Trip', date: t.savedAt || t.startDate, shared: true, type: t.type || 'trip', emoji: t.type === 'date' ? '💕' : '✈️' }))];
+              setTimeline(tl);
             }} className="text-[11px] font-bold text-[#C4956A] bg-[#FDF0E0] rounded-full px-3 py-1">🔄 Refresh</button>
             <button onClick={setAnniversary} className="text-[11px] font-bold text-[#C4956A] bg-[#FDF0E0] rounded-full px-3 py-1">💍 {anniv ? `${anniv.years}y` : 'Anniv'}</button>
           </div>
@@ -324,7 +343,7 @@ export default function CoupleDashboard() {
           <div className="flex items-center gap-4">
             <div className="flex -space-x-3">
               <div className="w-14 h-14 rounded-full bg-gradient-to-br from-pink-400 to-rose-500 flex items-center justify-center text-white text-xl font-extrabold ring-3 ring-white shadow-lg overflow-hidden">
-                {partner?.avatarUrl ? <img src={partner.avatarUrl} className="w-full h-full object-cover" alt="" /> : (pName?.[0] || '?')}
+                {(partner?.avatar || partner?.avatarUrl) ? <img src={partner.avatar || partner.avatarUrl} className="w-full h-full object-cover" alt={pName} onError={e=>{(e.target as HTMLImageElement).style.display='none'}} /> : (pName?.[0] || '?')}
               </div>
               <div className="w-14 h-14 rounded-full bg-gradient-to-br from-amber-400 to-orange-500 flex items-center justify-center text-white text-xl font-extrabold ring-3 ring-white shadow-lg overflow-hidden">
                 Y
